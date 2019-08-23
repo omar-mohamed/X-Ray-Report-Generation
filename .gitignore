@@ -1,5 +1,6 @@
 .idea/
-IU-XRay/
+IU-XRay/images
+IU-XRay/reports
 models/__pycache__/
 __pycache__/
 medical_word_embeddings/pubmed2018_w2v_400D.bin
