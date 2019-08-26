@@ -136,14 +136,16 @@ checkpoint_path = "./checkpoints/train"
 ckpt = tf.train.Checkpoint(encoder=encoder,
                            decoder=decoder,
                            optimizer = optimizer)
+
 ckpt_manager = tf.train.CheckpointManager(ckpt, checkpoint_path, max_to_keep=5)
 
 start_epoch = 0
 if ckpt_manager.latest_checkpoint:
-  start_epoch = int(ckpt_manager.latest_checkpoint.split('-')[-1])
+    start_epoch = int(ckpt_manager.latest_checkpoint.split('-')[-1])
+    ckpt.restore(ckpt_manager.latest_checkpoint)
+    print("Restored from checkpoint: {}".format(ckpt_manager.latest_checkpoint))
 
-EPOCHS = 20
-start_epoch = 0
+EPOCHS = 100
 for epoch in range(start_epoch, EPOCHS):
     start = time.time()
     total_loss = 0
@@ -159,21 +161,23 @@ for epoch in range(start_epoch, EPOCHS):
         batch_loss, t_loss = train_step(img_tensor, target)
         total_loss += t_loss
 
-        if batch % 100 == 0:
+        if batch % 50 == 0:
             print('Epoch {} Batch {} Loss {:.4f}'.format(
                 epoch + 1, batch, batch_loss.numpy() / int(target.shape[1])))
     # storing the epoch end loss value to plot later
     loss_plot.append(total_loss / data_generator.steps)
 
-    if epoch % 5 == 0:
-      ckpt_manager.save()
+    if epoch % 1 == 0:
+        ckpt_manager.save()
 
     print('Epoch {} Loss {:.6f}'.format(epoch + 1,
                                         total_loss / data_generator.steps))
     print('Time taken for 1 epoch {} sec\n'.format(time.time() - start))
 
-plt.plot(loss_plot)
-plt.xlabel('Epochs')
-plt.ylabel('Loss')
-plt.title('Loss Plot')
-plt.show()
+    plt.plot(loss_plot)
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.title('Loss Plot')
+    plt.savefig("loss.png")
+
+# plt.show()

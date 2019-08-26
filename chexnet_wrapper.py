@@ -30,7 +30,7 @@ class ChexnetWrapper:
             pop_last_layer=True)
         self.model.summary()
 
-    def get_visual_features(self, image):
+    def get_visual_features(self, images):
 
-        visual_features = self.model.predict(image)
+        visual_features = self.model.predict(images)
         return visual_features
