@@ -1,3 +1,16 @@
+
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+from nltk.translate import bleu_score,meteor_score
+import numpy as np
+x=[1,2,2,3]
+hyp=['am','leg']
+ref=['am','legend']
+# print(bleu_score.sentence_bleu([ref],hyp,weights=[0.5,0.5]))
+print(bleu_score.corpus_bleu([[ref]],[hyp],weights=[1.0]))
+
+# plt.imsave(path)
+
 # import tensorflow as tf
 
 # print(tf.__version__)

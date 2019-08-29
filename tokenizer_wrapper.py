@@ -34,6 +34,19 @@ class TokenizerWrapper:
     def get_token_of_word(self,word):
         return self.tokenizer.word_index[word]
 
+    def get_word_from_token(self,token):
+        return self.tokenizer.index_word[token]
+
+    def get_sentence_from_tokens(self,tokens):
+        sentence=[]
+        for token in tokens:
+            sentence.append(self.get_word_from_token(token))
+        return sentence
+
+    def get_string_from_word_list(self,word_list):
+
+        return " ".join(word_list)
+
     def get_word_tokens_list(self):
         return self.tokenizer.word_index
 
