@@ -25,7 +25,7 @@ training_csv=cp['Data'].get('training_set_csv')
 image_dimension = cp["Chexnet_Default"].getint("image_dimension")
 
 batch_size = cp["Captioning_Model_Train"].getint("batch_size")
-training_counts = get_sample_counts(data_dir, cp['Data'].get('training_set_csv'))
+training_counts = get_sample_counts(data_dir, training_csv)
 EPOCHS = cp["Captioning_Model_Train"].getint("epochs")
 
 max_sequence_length = cp['Captioning_Model'].getint('max_sequence_length')

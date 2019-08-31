@@ -28,7 +28,7 @@ testing_csv = cp['Data'].get('testing_set_csv')
 image_dimension = cp["Chexnet_Default"].getint("image_dimension")
 
 batch_size = cp["Captioning_Model_Inference"].getint("batch_size")
-testing_counts = get_sample_counts(data_dir, cp['Data'].get('testing_set_csv'))
+testing_counts = get_sample_counts(data_dir, testing_csv)
 
 max_sequence_length = cp['Captioning_Model'].getint('max_sequence_length')
 
@@ -150,9 +150,9 @@ def save_output_prediction(img_name, target_sentence, predicted_sentence):
 
     caption = "Real caption: {}\n\nPrediction: {}".format(target_sentence, predicted_sentence)
     # plt.ioff()
-    fig = plt.figure(figsize=(19.20, 10.80))
-    fig.add_axes((.0, .3, .9, .7))
-    fig.text(.1, .1, caption, wrap=True)
+    fig = plt.figure(figsize=(7.20, 10.80))
+    fig.add_axes((.0, .5, .9, .7))
+    fig.text(.1, .3, caption, wrap=True, fontsize=20)
 
     plt.xticks([])
     plt.yticks([])
@@ -174,7 +174,7 @@ for batch in range(data_generator.steps):
     hypothesis.append(result)
     target_sentence = tokenizer_wrapper.get_string_from_word_list(target_word_list)
     predicted_sentence = tokenizer_wrapper.get_string_from_word_list(result)
-    # save_output_prediction(img_path[0], target_sentence, predicted_sentence)
+    save_output_prediction(img_path[0], target_sentence, predicted_sentence)
 
 print(get_bleu_scores(hypothesis, references))
 
