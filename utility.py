@@ -16,7 +16,7 @@ def get_sample_counts(output_dir, dataset):
     total_count - int
     class_positive_counts - dict of int, ex: {"Effusion": 300, "Infiltration": 500 ...}
     """
-    df = pd.read_csv(os.path.join(output_dir, f"{dataset}.csv"))
+    df = pd.read_csv(os.path.join(output_dir, f"{dataset}"))
     total_count = df.shape[0]
 
     return total_count

@@ -34,13 +34,21 @@ class TokenizerWrapper:
     def get_token_of_word(self,word):
         return self.tokenizer.word_index[word]
 
-    def get_word_from_token(self,token):
-        return self.tokenizer.index_word[token]
+    def get_word_from_token(self, token):
+        try:
+            return self.tokenizer.index_word[token]
+        except:
+            return ""
 
-    def get_sentence_from_tokens(self,tokens):
-        sentence=[]
-        for token in tokens:
-            sentence.append(self.get_word_from_token(token))
+    def get_sentence_from_tokens(self, tokens):
+        sentence = []
+        for token in tokens[0]:
+            word = self.get_word_from_token(token)
+            if word == 'endseq':
+                return sentence
+            if word != 'startseq':
+                sentence.append(word)
+
         return sentence
 
     def get_string_from_word_list(self,word_list):

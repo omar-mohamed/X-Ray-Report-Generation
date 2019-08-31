@@ -23,10 +23,7 @@ class RNN_Decoder(tf.keras.Model):
     self.fc2 = tf.keras.layers.Dense(vocab_size)
 
     self.attention = BahdanauAttention(self.units)
-  def set_embedding_weights(self,weights):
-    self.embedding.set_weights([weights])
-  def get_embedding_weights(self):
-    return self.embedding.get_weights()
+
   def call(self, x, features, hidden):
     # defining attention as a separate model
     context_vector, attention_weights = self.attention(features, hidden)

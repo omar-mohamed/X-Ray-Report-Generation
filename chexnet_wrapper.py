@@ -10,22 +10,22 @@ class ChexnetWrapper:
         cp.read(config_file)
 
         # default config
-        weights_dir = cp["DEFAULT"].get("weights_dir")
-        base_model_name = cp["DEFAULT"].get("base_model_name")
-        chexnet_class_names = cp["DEFAULT"].get("chexnet_class_names").split(",")
+        weights_dir = cp["Chexnet_Default"].get("weights_dir")
+        base_model_name = cp["Chexnet_Default"].get("base_model_name")
+        chexnet_class_names = cp["Chexnet_Default"].get("chexnet_class_names").split(",")
 
         # parse weights file path
-        output_weights_name = cp["TRAIN"].get("output_weights_name")
-        weights_path = os.path.join(weights_dir, output_weights_name)
-
+        weights_name = cp["Chexnet_Inference"].get("weights_name")
+        weights_path = os.path.join(weights_dir, weights_name)
+        model_weights_path = weights_path
+        use_base_weights=cp["Chexnet_Inference"].getboolean("use_base_model_weights")
         print("** load model **")
 
-        model_weights_path = weights_path
         model_factory = ModelFactory()
         self.model = model_factory.get_model(
             chexnet_class_names,
             model_name=base_model_name,
-            use_base_weights=False,
+            use_base_weights=use_base_weights,
             weights_path=model_weights_path,
             pop_last_layer=True)
         self.model.summary()
