@@ -1,6 +1,7 @@
 import os
 from configparser import ConfigParser
 from models.chexnet import ModelFactory
+import numpy as np
 
 class ChexnetWrapper:
     def __init__(self):
@@ -28,9 +29,10 @@ class ChexnetWrapper:
             use_base_weights=use_base_weights,
             weights_path=model_weights_path,
             pop_last_layer=True)
-        self.model.summary()
+        # self.model.summary()
 
     def get_visual_features(self, images):
 
         visual_features = self.model.predict(images)
+        visual_features = np.reshape(visual_features,(visual_features.shape[0],-1,visual_features.shape[-1]))
         return visual_features

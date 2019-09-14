@@ -6,8 +6,7 @@ import os
 from configparser import ConfigParser
 from generator import AugmentedImageSequence
 from utility import get_sample_counts
-from tensorflow.python.eager.context import eager_mode, graph_mode
-from medical_w2v_wrapper import Medical_W2V_Wrapper
+from tensorflow.python.eager.context import  graph_mode
 from tokenizer_wrapper import TokenizerWrapper
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
@@ -23,7 +22,7 @@ class_names = cp["Captioning_Model"].get("class_names").split(",")
 image_source_dir = cp["Data"].get("image_source_dir")
 data_dir = cp["Data"].get("data_dir")
 all_data_csv = cp['Data'].get('all_data_csv')
-testing_csv = cp['Data'].get('testing_set_csv')
+testing_csv = cp['Data'].get('training_set_csv')
 
 image_dimension = cp["Chexnet_Default"].getint("image_dimension")
 
@@ -31,6 +30,7 @@ batch_size = cp["Captioning_Model_Inference"].getint("batch_size")
 testing_counts = get_sample_counts(data_dir, testing_csv)
 
 max_sequence_length = cp['Captioning_Model'].getint('max_sequence_length')
+tokenizer_vocab_size = cp['Captioning_Model'].getint('tokenizer_vocab_size')
 
 # These two variables represent that vector shape
 features_shape = cp["Captioning_Model"].getint("features_shape")
@@ -63,15 +63,9 @@ data_generator = AugmentedImageSequence(
     shuffle_on_epoch_end=False,
 )
 
-vocab_size = tokenizer_wrapper.get_tokenizer_word_index()
-
-medical_w2v = Medical_W2V_Wrapper()
-embeddings = medical_w2v.get_embeddings_matrix_for_words(tokenizer_wrapper.get_word_tokens_list())
-print(embeddings.shape)
-del medical_w2v
 
 encoder = CNN_Encoder(embedding_dim)
-decoder = RNN_Decoder(embedding_dim, units, vocab_size, embeddings)
+decoder = RNN_Decoder(embedding_dim, units, tokenizer_vocab_size)
 optimizer = tf.keras.optimizers.Adam()
 
 with graph_mode():
@@ -106,9 +100,11 @@ def evaluate(image_tensor):
 
         # predicted_id = tf.argmax(predictions[0]).numpy()
         softmax_predictions = tf.nn.softmax(tf.cast(predictions[0], dtype=tf.float64))
-
-        predicted_id = np.random.choice(len(predictions[0]), p=softmax_predictions)
-
+        predicted_id = 1
+        counter = 0
+        while predicted_id == 1 and counter < 10:
+            predicted_id = np.random.choice(len(predictions[0]), p=softmax_predictions)
+            counter += 1
         if tokenizer_wrapper.get_word_from_token(predicted_id) == 'endseq':
             return result, attention_plot
 
@@ -174,7 +170,7 @@ for batch in range(data_generator.steps):
     hypothesis.append(result)
     target_sentence = tokenizer_wrapper.get_string_from_word_list(target_word_list)
     predicted_sentence = tokenizer_wrapper.get_string_from_word_list(result)
-    save_output_prediction(img_path[0], target_sentence, predicted_sentence)
+    # save_output_prediction(img_path[0], target_sentence, predicted_sentence)
 
 print(get_bleu_scores(hypothesis, references))
 

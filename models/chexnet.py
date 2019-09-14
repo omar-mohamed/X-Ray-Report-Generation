@@ -99,6 +99,6 @@ class ModelFactory:
         if pop_last_layer:
             for _ in range(1):
                 # loaded_model.layers.pop()
-                loaded_model.outputs = [loaded_model.layers[-2].output]
+                loaded_model.outputs = [loaded_model.layers[-3].output]
                 # loaded_model.layers[-1].outbound_nodes = []
         return loaded_model

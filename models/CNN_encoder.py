@@ -7,8 +7,11 @@ class CNN_Encoder(tf.keras.Model):
         super(CNN_Encoder, self).__init__()
         # shape after fc == (batch_size, 64, embedding_dim)
         self.fc = tf.keras.layers.Dense(embedding_dim)
+        self.fc2 = tf.keras.layers.Dense(embedding_dim)
 
     def call(self, x):
         x = self.fc(x)
+        x = tf.nn.relu(x)
+        x = self.fc2(x)
         x = tf.nn.relu(x)
         return x

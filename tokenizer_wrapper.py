@@ -5,10 +5,11 @@ from tensorflow.python.keras.preprocessing.text import text_to_word_sequence
 import numpy as np
 
 class TokenizerWrapper:
-    def __init__(self,dataset_csv_file,class_name,max_caption_length):
+    def __init__(self, dataset_csv_file, class_name, max_caption_length, tokenizer_num_words=None):
         dataset_df = pd.read_csv(dataset_csv_file)
         sentences = dataset_df[class_name].tolist()
         self.max_caption_length=max_caption_length
+        self.tokenizer_num_words=tokenizer_num_words
         self.init_tokenizer(sentences)
 
     def clean_sentence(self,sentence):
@@ -23,13 +24,13 @@ class TokenizerWrapper:
 
         # Tokenize the reviews
         print("Tokenizing dataset..")
-        self.tokenizer = Tokenizer(oov_token='UNK')
+        self.tokenizer = Tokenizer(oov_token='UNK', num_words=self.tokenizer_num_words)
         self.tokenizer.fit_on_texts(sentences)  # give each word a unique id
         print("number of tokens: {}".format(self.tokenizer.word_index))
         print("Tokenizing is complete.")
 
-    def get_tokenizer_word_index(self):
-        return len(self.tokenizer.word_index)+1
+    def get_tokenizer_num_words(self):
+        return self.tokenizer_num_words
 
     def get_token_of_word(self,word):
         return self.tokenizer.word_index[word]

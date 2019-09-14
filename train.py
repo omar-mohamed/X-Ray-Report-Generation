@@ -29,10 +29,8 @@ training_counts = get_sample_counts(data_dir, training_csv)
 EPOCHS = cp["Captioning_Model_Train"].getint("epochs")
 
 max_sequence_length = cp['Captioning_Model'].getint('max_sequence_length')
+tokenizer_vocab_size = cp['Captioning_Model'].getint('tokenizer_vocab_size')
 
-# These two variables represent that vector shape
-features_shape = cp["Captioning_Model"].getint("features_shape")
-attention_features_shape = cp["Captioning_Model"].getint("attention_features_shape")
 
 BUFFER_SIZE = cp["Captioning_Model"].getint("buffer_size")
 embedding_dim = cp["Captioning_Model"].getint("embedding_dim")
@@ -47,7 +45,7 @@ print(f"** train_steps: {steps} **")
 print("** load training generator **")
 
 tokenizer_wrapper = TokenizerWrapper(os.path.join(data_dir, all_data_csv), class_names[0],
-                                     max_sequence_length)
+                                     max_sequence_length, tokenizer_vocab_size)
 
 data_generator = AugmentedImageSequence(
     dataset_csv_file=os.path.join(data_dir, training_csv),
@@ -62,14 +60,12 @@ data_generator = AugmentedImageSequence(
 )
 
 medical_w2v = Medical_W2V_Wrapper()
-embeddings = medical_w2v.get_embeddings_matrix_for_words(tokenizer_wrapper.get_word_tokens_list())
+embeddings = medical_w2v.get_embeddings_matrix_for_words(tokenizer_wrapper.get_word_tokens_list(),tokenizer_vocab_size)
 print(embeddings.shape)
 del medical_w2v
 
-vocab_size = tokenizer_wrapper.get_tokenizer_word_index()
-
 encoder = CNN_Encoder(embedding_dim)
-decoder = RNN_Decoder(embedding_dim, units, vocab_size, embeddings)
+decoder = RNN_Decoder(embedding_dim, units, tokenizer_vocab_size, embeddings)
 
 optimizer = tf.keras.optimizers.Adam()
 loss_object = tf.keras.losses.SparseCategoricalCrossentropy(
@@ -141,6 +137,7 @@ for epoch in range(start_epoch, EPOCHS):
 
     for batch in range(data_generator.steps):
         img, target,_ = data_generator.__getitem__(batch)
+        # print( target.max())
         with graph_mode():
             img_tensor = chexnet.get_visual_features(img)
 
