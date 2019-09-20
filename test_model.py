@@ -22,7 +22,7 @@ class_names = cp["Captioning_Model"].get("class_names").split(",")
 image_source_dir = cp["Data"].get("image_source_dir")
 data_dir = cp["Data"].get("data_dir")
 all_data_csv = cp['Data'].get('all_data_csv')
-testing_csv = cp['Data'].get('training_set_csv')
+testing_csv = cp['Data'].get('testing_set_csv')
 
 image_dimension = cp["Chexnet_Default"].getint("image_dimension")
 

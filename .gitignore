@@ -8,3 +8,7 @@ output_captions/
 checkpoints/
 train_output_captions/
 test_output_captions/
+test_output_captions_2_gru_1000/
+test_output_captions_2_gru/
+train_captions_big/
+test_captions_big/

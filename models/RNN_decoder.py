@@ -22,13 +22,15 @@ class RNN_Decoder(tf.keras.Model):
                                    return_state=True,
                                    recurrent_initializer='glorot_uniform')
 
-    # self.gru2 = tf.keras.layers.GRU(self.units,
-    #                                 return_sequences=True,
-    #                                 return_state=True,
-    #                                 recurrent_initializer='glorot_uniform')
+    self.gru2 = tf.keras.layers.GRU(self.units,
+                                    return_sequences=True,
+                                    return_state=True,
+                                    recurrent_initializer='glorot_uniform')
 
     self.fc1 = tf.keras.layers.Dense(self.units)
-    self.fc2 = tf.keras.layers.Dense(vocab_size)
+    self.fc2 = tf.keras.layers.Dense(self.units)
+
+    self.fc3 = tf.keras.layers.Dense(vocab_size)
 
     self.attention = BahdanauAttention(self.units)
 
@@ -43,16 +45,20 @@ class RNN_Decoder(tf.keras.Model):
 
     # passing the concatenated vector to the GRU
     output, state = self.gru(x)
-    # output, _ = self.gru2(output)
+    output, _ = self.gru2(output)
 
     # shape == (batch_size, max_length, hidden_size)
     x = self.fc1(output)
     x = tf.nn.relu(x)
+
+    x = self.fc2(output)
+    x = tf.nn.relu(x)
+
     # x shape == (batch_size * max_length, hidden_size)
     x = tf.reshape(x, (-1, x.shape[2]))
 
     # output shape == (batch_size * max_length, vocab)
-    x = self.fc2(x)
+    x = self.fc3(x)
 
     return x, state, attention_weights
 
