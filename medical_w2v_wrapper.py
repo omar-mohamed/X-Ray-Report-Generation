@@ -1,23 +1,39 @@
 import gensim
 import numpy as np
 
+
 class Medical_W2V_Wrapper:
     def __init__(self):
-        self.word_embeddings = gensim.models.KeyedVectors.load_word2vec_format("medical_word_embeddings/pubmed2018_w2v_400D.bin",
-                                                              binary=True)
+        self.word_embeddings = gensim.models.KeyedVectors.load_word2vec_format(
+            "medical_word_embeddings/pubmed2018_w2v_400D.bin",
+            binary=True)
 
-
-
-    def get_embeddings_matrix_for_words(self,word_tokens,vocab_size):
-        embeddings=np.random.uniform(low=1e-5,high=1,size=(vocab_size,self.word_embeddings['the'].shape[0]))
-        word_counter=0
+    def get_embeddings_matrix_for_words(self, word_tokens, vocab_size):
+        embeddings = np.random.uniform(low=1e-5, high=1, size=(vocab_size, self.word_embeddings['the'].shape[0]))
+        word_counter = 0
         for word, token in word_tokens.items():
             try:
-                embeddings[token,:]=self.word_embeddings[word]
+                embeddings[token, :] = self.word_embeddings[word]
             except:
                 print("Word: {} not found in medical word embeddings".format(word))
-            word_counter+=1
+            word_counter += 1
             if word_counter == vocab_size:
                 break
         return embeddings
 
+    def get_embeddings_matrix_for_tags(self, tag_classes):
+        embeddings = np.zeros(shape=(len(tag_classes), self.word_embeddings['the'].shape[0]))
+        token = 0
+        for _class in tag_classes:
+            if _class in self.word_embeddings:
+                embeddings[token, :] = self.word_embeddings[_class]
+            else:
+                sentence = _class.split()
+                sentence_vec = np.zeros(self.word_embeddings['the'].shape[0])
+                for word in sentence:
+                    sentence_vec += self.word_embeddings[word]
+
+                embeddings[token, :] = sentence_vec
+
+            token += 1
+        return embeddings

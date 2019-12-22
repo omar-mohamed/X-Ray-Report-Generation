@@ -92,16 +92,20 @@ for report in reports:
                 img_ids.append(image.get("id") + ".png")
                 all_data_csv_dictionary['Image Index'].append(image.get("id") + ".png")
                 all_data_csv_dictionary['Patient ID'].append(patient_id)
-                all_data_csv_dictionary['Findings'].append(findings)
-                all_data_csv_dictionary['Impression'].append(impression)
-                all_data_csv_dictionary['Caption'].append(caption)
+                if findings is None:
+                    findings=""
+                if impression is None:
+                    impression=""
+                all_data_csv_dictionary['Findings'].append('startseq '+findings+' endseq')
+                all_data_csv_dictionary['Impression'].append('startseq '+impression+' endseq')
+                all_data_csv_dictionary['Caption'].append('startseq '+caption+' endseq')
 
             reports_with_images[report] = img_ids
             text_of_reports[report] = caption
             patient_id = patient_id + 1
 
 appearance_limit=25
-to_ignore=['technical quality of image unsatisfactory','surgical instruments','no indexing','multiple','inserted']
+to_ignore=[]
 
 selected_classes={}
 for tags_list in manual_tags_list:
@@ -157,16 +161,7 @@ def save_csv(csv_dictionary,csv_name,just_caption=False):
 
 
 
-save_csv(all_data_csv_dictionary,"all_data_manual_tags_100.csv")
-save_csv(train_csv,"training_set_manual_tags_100.csv")
-save_csv(test_csv,"testing_set_manual_tags_100.csv")
+save_csv(all_data_csv_dictionary,"all_data.csv")
+save_csv(train_csv,"training_set.csv")
+save_csv(test_csv,"testing_set.csv")
 
-
-# for automatic_tag in automatic_tags:
-#     automatic_tag=automatic_tag.text.lower()
-#     automatic_tag = automatic_tag.split('/')
-#     for word in automatic_tag:
-#         if word.strip() in automatic_tags_dic.keys():
-#             automatic_tags_dic[word.strip()] +=1
-#         else:
-#             automatic_tags_dic[word.strip()] = 1

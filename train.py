@@ -2,72 +2,45 @@ import tensorflow as tf
 from models.CNN_encoder import CNN_Encoder
 from models.RNN_decoder import RNN_Decoder
 from chexnet_wrapper import ChexnetWrapper
-import os
-from configparser import ConfigParser
+from configs import argHandler
 from generator import AugmentedImageSequence
-from utility import get_sample_counts
 import time
-from tensorflow.python.eager.context import eager_mode, graph_mode
 from augmenter import augmenter
 from medical_w2v_wrapper import Medical_W2V_Wrapper
 from tokenizer_wrapper import TokenizerWrapper
 import matplotlib.pyplot as plt
+from utility import get_optimizer, load_model
 
-config_file = "./config.ini"
-cp = ConfigParser()
-cp.read(config_file)
-class_names = cp["Captioning_Model"].get("class_names").split(",")
-image_source_dir = cp["Data"].get("image_source_dir")
-data_dir = cp["Data"].get("data_dir")
-all_data_csv=cp['Data'].get('all_data_csv')
-training_csv=cp['Data'].get('training_set_csv')
+FLAGS = argHandler()
+FLAGS.setDefaults()
 
-image_dimension = cp["Chexnet_Default"].getint("image_dimension")
-
-batch_size = cp["Captioning_Model_Train"].getint("batch_size")
-training_counts = get_sample_counts(data_dir, training_csv)
-EPOCHS = cp["Captioning_Model_Train"].getint("epochs")
-
-max_sequence_length = cp['Captioning_Model'].getint('max_sequence_length')
-tokenizer_vocab_size = cp['Captioning_Model'].getint('tokenizer_vocab_size')
-
-
-BUFFER_SIZE = cp["Captioning_Model"].getint("buffer_size")
-embedding_dim = cp["Captioning_Model"].getint("embedding_dim")
-units = cp["Captioning_Model"].getint("units")
-
-checkpoint_path = cp["Captioning_Model_Train"].get("ckpt_path")
-continue_from_last_ckpt=cp["Captioning_Model_Train"].getboolean("continue_from_last_ckpt")
-# compute steps
-steps = int(training_counts / batch_size)
-print(f"** train_steps: {steps} **")
-
-print("** load training generator **")
-
-tokenizer_wrapper = TokenizerWrapper(os.path.join(data_dir, all_data_csv), class_names[0],
-                                     max_sequence_length, tokenizer_vocab_size)
+tokenizer_wrapper = TokenizerWrapper(FLAGS.all_data_csv, FLAGS.csv_label_columns[0],
+                                     FLAGS.max_sequence_length, FLAGS.tokenizer_vocab_size)
 
 data_generator = AugmentedImageSequence(
-    dataset_csv_file=os.path.join(data_dir, training_csv),
-    class_names=class_names,
+    dataset_csv_file= FLAGS.train_csv,
+    class_names=FLAGS.csv_label_columns,
     tokenizer_wrapper=tokenizer_wrapper,
-    source_image_dir=image_source_dir,
-    batch_size=batch_size,
-    target_size=(image_dimension, image_dimension),
+    source_image_dir=FLAGS.image_directory,
+    batch_size=FLAGS.batch_size,
+    target_size=FLAGS.image_target_size,
     augmenter=augmenter,
-    steps=steps,
     shuffle_on_epoch_end=True,
 )
 
 medical_w2v = Medical_W2V_Wrapper()
-embeddings = medical_w2v.get_embeddings_matrix_for_words(tokenizer_wrapper.get_word_tokens_list(),tokenizer_vocab_size)
-print(embeddings.shape)
+embeddings = medical_w2v.get_embeddings_matrix_for_words(tokenizer_wrapper.get_word_tokens_list(), FLAGS.tokenizer_vocab_size)
+tags_embeddings = medical_w2v.get_embeddings_matrix_for_tags(FLAGS.tags)
+print(f"Embeddings shape: {embeddings.shape}")
+print(f"Tags Embeddings shape: {tags_embeddings.shape}")
+
 del medical_w2v
 
-encoder = CNN_Encoder(embedding_dim)
-decoder = RNN_Decoder(embedding_dim, units, tokenizer_vocab_size, embeddings)
+encoder = CNN_Encoder(FLAGS.embedding_dim, tags_embeddings)
+decoder = RNN_Decoder(FLAGS.embedding_dim, FLAGS.units, FLAGS.tokenizer_vocab_size, embeddings)
 
-optimizer = tf.keras.optimizers.Adam()
+optimizer = get_optimizer(FLAGS.optimizer_type, FLAGS.learning_rate)
+
 loss_object = tf.keras.losses.SparseCategoricalCrossentropy(
     from_logits=True, reduction='none')
 
@@ -86,16 +59,16 @@ loss_plot = []
 
 
 @tf.function
-def train_step(img_tensor, target):
+def train_step(tag_predictions, visual_features, target):
     loss = 0
     # initializing the hidden state for each batch
     # because the captions are not related from image to image
     hidden = decoder.reset_state(batch_size=target.shape[0])
 
-    dec_input = tf.expand_dims([tokenizer_wrapper.get_token_of_word("startseq")] * batch_size, 1)
+    dec_input = tf.expand_dims([tokenizer_wrapper.get_token_of_word("startseq")] * FLAGS.batch_size, 1)
 
     with tf.GradientTape() as tape:
-        features = encoder(img_tensor)
+        features = encoder(tag_predictions, visual_features)
         # print("encoded")
 
         for i in range(1, target.shape[1]):
@@ -115,36 +88,33 @@ def train_step(img_tensor, target):
     return loss, total_loss
 
 
-with graph_mode():
-    chexnet = ChexnetWrapper()
-
+chexnet = ChexnetWrapper('pretrained_models',FLAGS.visual_model_name)
 
 ckpt = tf.train.Checkpoint(encoder=encoder,
                            decoder=decoder,
                            optimizer=optimizer)
 
-ckpt_manager = tf.train.CheckpointManager(ckpt, checkpoint_path, max_to_keep=5)
+ckpt_manager = tf.train.CheckpointManager(ckpt, FLAGS.ckpt_path, max_to_keep=3)
 
 start_epoch = 0
-if ckpt_manager.latest_checkpoint and continue_from_last_ckpt:
+if ckpt_manager.latest_checkpoint and FLAGS.continue_from_last_ckpt:
     start_epoch = int(ckpt_manager.latest_checkpoint.split('-')[-1])
     ckpt.restore(ckpt_manager.latest_checkpoint)
     print("Restored from checkpoint: {}".format(ckpt_manager.latest_checkpoint))
 
-for epoch in range(start_epoch, EPOCHS):
+for epoch in range(start_epoch, FLAGS.num_epochs):
     start = time.time()
     total_loss = 0
 
     for batch in range(data_generator.steps):
         img, target,_ = data_generator.__getitem__(batch)
         # print( target.max())
-        with graph_mode():
-            img_tensor = chexnet.get_visual_features(img)
+        tag_predictions, visual_feaures = chexnet.get_visual_features(img,FLAGS.tags_threshold)
 
         print("batch: {}".format(batch))
         # img_tensor=np.random.randint(low=-1,high=1,size=(1,1024))
         # img_tensor=np.float32(img_tensor)
-        batch_loss, t_loss = train_step(img_tensor, target)
+        batch_loss, t_loss = train_step(tag_predictions, visual_feaures, target)
         total_loss += t_loss
 
         if batch % 5 == 0:

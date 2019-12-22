@@ -1,38 +1,16 @@
-import os
-from configparser import ConfigParser
-from models.chexnet import ModelFactory
+from utility import load_model
 import numpy as np
+from tensorflow.keras.models import Model
 
 class ChexnetWrapper:
-    def __init__(self):
-        # parser config
-        config_file = "./config.ini"
-        cp = ConfigParser()
-        cp.read(config_file)
+    def __init__(self,model_path, model_name):
+        model = load_model(model_path, model_name)
+        self.model = Model(inputs=model.input,outputs=[model.output, model.layers[-2].output])
+        self.model.summary()
+    def get_visual_features(self, images, threshold):
 
-        # default config
-        weights_dir = cp["Chexnet_Default"].get("weights_dir")
-        base_model_name = cp["Chexnet_Default"].get("base_model_name")
-        chexnet_class_names = cp["Chexnet_Default"].get("chexnet_class_names").split(",")
-
-        # parse weights file path
-        weights_name = cp["Chexnet_Inference"].get("weights_name")
-        weights_path = os.path.join(weights_dir, weights_name)
-        model_weights_path = weights_path
-        use_base_weights=cp["Chexnet_Inference"].getboolean("use_base_model_weights")
-        print("** load model **")
-
-        model_factory = ModelFactory()
-        self.model = model_factory.get_model(
-            chexnet_class_names,
-            model_name=base_model_name,
-            use_base_weights=use_base_weights,
-            weights_path=model_weights_path,
-            pop_last_layer=True)
-        # self.model.summary()
-
-    def get_visual_features(self, images):
-
-        visual_features = self.model.predict(images)
+        predictions, visual_features = self.model.predict(images)
+        predictions = np.reshape(predictions,(predictions.shape[0],-1,predictions.shape[-1]))
         visual_features = np.reshape(visual_features,(visual_features.shape[0],-1,visual_features.shape[-1]))
-        return visual_features
+        predictions = np.array(predictions >= threshold,dtype=int)
+        return predictions, visual_features
