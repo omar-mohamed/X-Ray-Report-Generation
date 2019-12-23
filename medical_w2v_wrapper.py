@@ -9,7 +9,7 @@ class Medical_W2V_Wrapper:
             binary=True)
 
     def get_embeddings_matrix_for_words(self, word_tokens, vocab_size):
-        embeddings = np.random.uniform(low=1e-5, high=1, size=(vocab_size, self.word_embeddings['the'].shape[0]))
+        embeddings = np.zeros(shape=(vocab_size, self.word_embeddings['the'].shape[0]))
         word_counter = 0
         for word, token in word_tokens.items():
             try:

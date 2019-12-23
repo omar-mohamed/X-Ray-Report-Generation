@@ -10,7 +10,7 @@ augmenter = iaa.SomeOf((0, None),
         iaa.Affine(shear=(-32, 32)),
         iaa.Affine(scale={"x": (0.9, 1.2), "y": (0.9, 1.2)}),
         iaa.GammaContrast((0.5, 2.0)),
-        # iaa.SigmoidContrast(gain=(3, 10), cutoff=(0.4, 0.6))
+        iaa.SigmoidContrast(gain=(3, 10), cutoff=(0.4, 0.6))
     ],
     random_order=True,
 )

@@ -4,7 +4,7 @@ import pandas as pd
 import importlib
 import os
 from tensorflow.keras.models import model_from_json
-
+import efficientnet.tfkeras
 
 def get_sample_counts(output_dir, dataset):
     """
