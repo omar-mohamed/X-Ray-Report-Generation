@@ -14,13 +14,15 @@ class argHandler(dict):
         self.define('all_data_csv', './IU-XRay/all_data.csv',
                     'path to all data csv containing the images names and the labels')
         self.define('image_directory', './IU-XRay/images',
-                    'path to folder containing the patient folders which containg the images')
-        self.define('output_images_folder', './output_mages',
+                    'path to folder containing the patient folders which containing the images')
+        self.define('output_images_folder', './output_images',
                     'path to folder containing output images')
         self.define('data_dir', './IU-XRay',
-                    'path to folder containing the patient folders which containg the images')
+                    'path to folder containing the patient folders which containing the images')
         self.define('visual_model_name', 'fine_tuned_chexnet',
-                    'path to folder containing the patient folders which containg the images')
+                    'path to folder containing the patient folders which containing the images')
+        self.define('visual_model_pop_layers', 1,
+                    'number of conv layers to pop to get visual features')
         self.define('embedding_dim', 400,
                     'size of embedding vector')
         self.define('csv_label_columns', ['Findings'], 'the name of the label columns in the csv')
@@ -33,14 +35,14 @@ class argHandler(dict):
 
         self.define('tokenizer_vocab_size', 1001,
                     'The number of words to tokinze, the rest will be set as <unk>')
-        self.define('batch_size', 2, 'batch size for training and testing')
-        self.define('tags_threshold', 0.3,
+        self.define('batch_size', 30, 'batch size for training and testing')
+        self.define('tags_threshold', 0.2,
                     'The threshold from which to detect a tag.')
         self.define('ckpt_path', './checkpoints/',
                     'where to save the checkpoints. The path will be created if it does not exist. The system saves every epoch by default')
-        self.define('continue_from_last_ckpt', False,
+        self.define('continue_from_last_ckpt', True,
                     'continue training from last ckpt or not')
-        self.define('learning_rate', 1e-3, 'The optimizer learning rate')
+        self.define('learning_rate', 1e-4, 'The optimizer learning rate')
         self.define('optimizer_type', 'Adam', 'Choose from (Adam, SGD, RMSprop, Adagrad, Adadelta, Adamax, Nadam)')
         self.define('tags', tags,
                     'the names of the tags')

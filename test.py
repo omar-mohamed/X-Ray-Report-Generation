@@ -11,6 +11,7 @@ import matplotlib.image as mpimg
 from caption_evaluation import get_bleu_scores
 import numpy as np
 from PIL import Image
+import json
 
 FLAGS = argHandler()
 FLAGS.setDefaults()
@@ -34,7 +35,7 @@ encoder = CNN_Encoder(FLAGS.embedding_dim)
 decoder = RNN_Decoder(FLAGS.embedding_dim, FLAGS.units, FLAGS.tokenizer_vocab_size)
 optimizer = tf.keras.optimizers.Adam()
 
-chexnet = ChexnetWrapper('pretrained_models', FLAGS.visual_model_name)
+chexnet = ChexnetWrapper('pretrained_models',FLAGS.visual_model_name, FLAGS.visual_model_pop_layers)
 
 ckpt = tf.train.Checkpoint(encoder=encoder,
                            decoder=decoder,
@@ -134,9 +135,12 @@ for batch in range(data_generator.steps):
     hypothesis.append(result)
     target_sentence = tokenizer_wrapper.get_string_from_word_list(target_word_list)
     predicted_sentence = tokenizer_wrapper.get_string_from_word_list(result)
-    # save_output_prediction(img_path[0], target_sentence, predicted_sentence)
+    save_output_prediction(img_path[0], target_sentence, predicted_sentence)
 
-print(get_bleu_scores(hypothesis, references))
+scores = get_bleu_scores(hypothesis, references)
+print(scores)
+with open(os.path.join(FLAGS.save_model_path,'scores.json'), 'w') as fp:
+    json.dump(FLAGS, fp, indent=4)
 
 # # captions on the validation set
 # rid = np.random.randint(0, len(img_name_val))

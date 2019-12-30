@@ -10,6 +10,8 @@ from medical_w2v_wrapper import Medical_W2V_Wrapper
 from tokenizer_wrapper import TokenizerWrapper
 import matplotlib.pyplot as plt
 from utility import get_optimizer, load_model
+import os
+import json
 
 FLAGS = argHandler()
 FLAGS.setDefaults()
@@ -38,6 +40,7 @@ del medical_w2v
 
 encoder = CNN_Encoder(FLAGS.embedding_dim, tags_embeddings)
 decoder = RNN_Decoder(FLAGS.embedding_dim, FLAGS.units, FLAGS.tokenizer_vocab_size, embeddings)
+
 
 optimizer = get_optimizer(FLAGS.optimizer_type, FLAGS.learning_rate)
 
@@ -88,13 +91,20 @@ def train_step(tag_predictions, visual_features, target):
     return loss, total_loss
 
 
-chexnet = ChexnetWrapper('pretrained_models',FLAGS.visual_model_name)
+chexnet = ChexnetWrapper('pretrained_models',FLAGS.visual_model_name, FLAGS.visual_model_pop_layers)
 
 ckpt = tf.train.Checkpoint(encoder=encoder,
                            decoder=decoder,
                            optimizer=optimizer)
 
-ckpt_manager = tf.train.CheckpointManager(ckpt, FLAGS.ckpt_path, max_to_keep=3)
+try:
+    os.makedirs(FLAGS.ckpt_path)
+except:
+    print("path already exists")
+
+with open(os.path.join(FLAGS.ckpt_path,'configs.json'), 'w') as fp:
+    json.dump(FLAGS, fp, indent=4)
+ckpt_manager = tf.train.CheckpointManager(ckpt, FLAGS.ckpt_path, max_to_keep=1)
 
 start_epoch = 0
 if ckpt_manager.latest_checkpoint and FLAGS.continue_from_last_ckpt:
@@ -109,15 +119,14 @@ for epoch in range(start_epoch, FLAGS.num_epochs):
     for batch in range(data_generator.steps):
         img, target,_ = data_generator.__getitem__(batch)
         # print( target.max())
-        tag_predictions, visual_feaures = chexnet.get_visual_features(img,FLAGS.tags_threshold)
+        tag_predictions, visual_feaures = chexnet.get_visual_features(img, FLAGS.tags_threshold)
 
-        print("batch: {}".format(batch))
         # img_tensor=np.random.randint(low=-1,high=1,size=(1,1024))
         # img_tensor=np.float32(img_tensor)
         batch_loss, t_loss = train_step(tag_predictions, visual_feaures, target)
         total_loss += t_loss
 
-        if batch % 5 == 0:
+        if batch % 20 == 0:
             print('Epoch {} Batch {} Loss {:.4f}'.format(
                 epoch + 1, batch, batch_loss.numpy() / int(target.shape[1])))
     # storing the epoch end loss value to plot later
@@ -134,6 +143,6 @@ for epoch in range(start_epoch, FLAGS.num_epochs):
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
     plt.title('Loss Plot')
-    plt.savefig("loss.png")
+    plt.savefig(FLAGS.ckpt_path+"/loss.png")
 
 # plt.show()
