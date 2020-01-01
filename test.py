@@ -139,7 +139,7 @@ for batch in range(data_generator.steps):
 
 scores = get_bleu_scores(hypothesis, references)
 print(scores)
-with open(os.path.join(FLAGS.save_model_path,'scores.json'), 'w') as fp:
+with open(os.path.join(FLAGS.ckpt_path,'scores.json'), 'w') as fp:
     json.dump(scores, fp, indent=4)
 
 # # captions on the validation set
