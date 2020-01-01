@@ -140,7 +140,7 @@ for batch in range(data_generator.steps):
 scores = get_bleu_scores(hypothesis, references)
 print(scores)
 with open(os.path.join(FLAGS.save_model_path,'scores.json'), 'w') as fp:
-    json.dump(FLAGS, fp, indent=4)
+    json.dump(scores, fp, indent=4)
 
 # # captions on the validation set
 # rid = np.random.randint(0, len(img_name_val))
