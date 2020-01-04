@@ -25,17 +25,21 @@ class argHandler(dict):
                     'number of conv layers to pop to get visual features')
         self.define('embedding_dim', 400,
                     'size of embedding vector')
-        self.define('csv_label_columns', ['Findings'], 'the name of the label columns in the csv')
+        self.define('csv_label_columns', ['Impression'], 'the name of the label columns in the csv')
         self.define('image_target_size', (224, 224, 3), 'the target size to resize the image')
 
         self.define('max_sequence_length', 170,
                     'Maximum number of words in a sentence')
         self.define('num_epochs', 100, 'maximum number of epochs')
         self.define('units', 1024, 'number of units in the decoder')
+        self.define('tags_reducer_units', 1024, 'number of units to reduce the embeddings. choose 0 if you want to keep it as is')
+        self.define('encoder_layers', [], 'a list describing the hidden layers of the encoder. Example [10,0.4,5] will create a hidden layer with size 10 then dropout wth drop prob 0.4, then hidden layer with size 5. If empty it will connect to output nodes directly.')
+        self.define('classifier_layers', [], 'a list describing the hidden layers of the encoder. Example [10,0.4,5] will create a hidden layer with size 10 then dropout wth drop prob 0.4, then hidden layer with size 5. If empty it will connect to output nodes directly.')
+        self.define('tags_attention', True, 'if use attention on tags embeddings with visual features')
 
         self.define('tokenizer_vocab_size', 1001,
                     'The number of words to tokinze, the rest will be set as <unk>')
-        self.define('batch_size', 30, 'batch size for training and testing')
+        self.define('batch_size', 90, 'batch size for training and testing')
         self.define('tags_threshold', 0.2,
                     'The threshold from which to detect a tag.')
         self.define('ckpt_path', './checkpoints/',

@@ -38,8 +38,8 @@ print(f"Tags Embeddings shape: {tags_embeddings.shape}")
 
 del medical_w2v
 
-encoder = CNN_Encoder(FLAGS.embedding_dim, tags_embeddings)
-decoder = RNN_Decoder(FLAGS.embedding_dim, FLAGS.units, FLAGS.tokenizer_vocab_size, embeddings)
+encoder = CNN_Encoder(FLAGS.embedding_dim, FLAGS.tags_reducer_units, FLAGS.encoder_layers, tags_embeddings)
+decoder = RNN_Decoder(FLAGS.embedding_dim, FLAGS.units, FLAGS.tokenizer_vocab_size, FLAGS.classifier_layers, embeddings)
 
 
 optimizer = get_optimizer(FLAGS.optimizer_type, FLAGS.learning_rate)
@@ -71,7 +71,7 @@ def train_step(tag_predictions, visual_features, target):
     dec_input = tf.expand_dims([tokenizer_wrapper.get_token_of_word("startseq")] * FLAGS.batch_size, 1)
 
     with tf.GradientTape() as tape:
-        features = encoder(tag_predictions, visual_features)
+        features = encoder(visual_features, tag_predictions)
         # print("encoded")
 
         for i in range(1, target.shape[1]):
@@ -117,14 +117,22 @@ for epoch in range(start_epoch, FLAGS.num_epochs):
     total_loss = 0
 
     for batch in range(data_generator.steps):
+        t = time.time()
         img, target,_ = data_generator.__getitem__(batch)
+        print("Time to get batch: {} s ".format(time.time()-t))
         # print( target.max())
+        t = time.time()
         tag_predictions, visual_feaures = chexnet.get_visual_features(img, FLAGS.tags_threshold)
+        if not FLAGS.tags_attention:
+            tag_predictions = None
+        print("Time to get visual features: {} s ".format(time.time()-t))
 
         # img_tensor=np.random.randint(low=-1,high=1,size=(1,1024))
         # img_tensor=np.float32(img_tensor)
+        t = time.time()
         batch_loss, t_loss = train_step(tag_predictions, visual_feaures, target)
         total_loss += t_loss
+        print("Time to train step: {} s ".format(time.time()-t))
 
         if batch % 20 == 0:
             print('Epoch {} Batch {} Loss {:.4f}'.format(

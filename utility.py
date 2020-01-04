@@ -5,6 +5,16 @@ import importlib
 import os
 from tensorflow.keras.models import model_from_json
 import efficientnet.tfkeras
+from tensorflow.keras.layers import Dense, Dropout, Flatten
+
+def get_layers(layer_sizes, activation = 'relu'):
+    layers = []
+    for layer_size in layer_sizes:
+        if layer_size < 1:
+            layers.append(Dropout(layer_size))
+        else:
+            layers.append(Dense(layer_size, activation=activation))
+    return layers
 
 def get_sample_counts(output_dir, dataset):
     """

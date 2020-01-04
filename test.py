@@ -31,8 +31,9 @@ data_generator = AugmentedImageSequence(
     shuffle_on_epoch_end=False,
 )
 
-encoder = CNN_Encoder(FLAGS.embedding_dim)
-decoder = RNN_Decoder(FLAGS.embedding_dim, FLAGS.units, FLAGS.tokenizer_vocab_size)
+encoder = CNN_Encoder(FLAGS.embedding_dim, FLAGS.tags_reducer_units, FLAGS.encoder_layers)
+decoder = RNN_Decoder(FLAGS.embedding_dim, FLAGS.units, FLAGS.tokenizer_vocab_size, FLAGS.classifier_layers)
+
 optimizer = tf.keras.optimizers.Adam()
 
 chexnet = ChexnetWrapper('pretrained_models',FLAGS.visual_model_name, FLAGS.visual_model_pop_layers)
@@ -54,7 +55,7 @@ def evaluate(tag_predictions, visual_features):
 
     hidden = decoder.reset_state(batch_size=1)
 
-    features = encoder(tag_predictions, visual_features)
+    features = encoder(visual_features, tag_predictions)
 
     dec_input = tf.expand_dims([tokenizer_wrapper.get_token_of_word("startseq")], 0)
     result = []
@@ -129,6 +130,8 @@ for batch in range(data_generator.steps):
     print("Batch: {}".format(batch))
     img, target, img_path = data_generator.__getitem__(batch)
     tag_predictions, visual_feaures = chexnet.get_visual_features(img, FLAGS.tags_threshold)
+    if not FLAGS.tags_attention:
+        tag_predictions = None
     result, attention_plot = evaluate(tag_predictions, visual_feaures)
     target_word_list = tokenizer_wrapper.get_sentence_from_tokens(target)
     references.append([target_word_list])
