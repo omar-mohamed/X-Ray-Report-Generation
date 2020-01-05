@@ -4,53 +4,17 @@ from models.RNN_decoder import RNN_Decoder
 from chexnet_wrapper import ChexnetWrapper
 import os
 from configs import argHandler
-from generator import AugmentedImageSequence
 from tokenizer_wrapper import TokenizerWrapper
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from caption_evaluation import get_bleu_scores
+from utility import get_enqueuer
 import numpy as np
 from PIL import Image
 import json
 
-FLAGS = argHandler()
-FLAGS.setDefaults()
 
-tokenizer_wrapper = TokenizerWrapper(FLAGS.all_data_csv, FLAGS.csv_label_columns[0],
-                                     FLAGS.max_sequence_length, FLAGS.tokenizer_vocab_size)
-
-print("** load test generator **")
-
-data_generator = AugmentedImageSequence(
-    dataset_csv_file=FLAGS.test_csv,
-    class_names=FLAGS.csv_label_columns,
-    tokenizer_wrapper=tokenizer_wrapper,
-    source_image_dir=FLAGS.image_directory,
-    batch_size=1,
-    target_size=FLAGS.image_target_size,
-    shuffle_on_epoch_end=False,
-)
-
-encoder = CNN_Encoder(FLAGS.embedding_dim, FLAGS.tags_reducer_units, FLAGS.encoder_layers)
-decoder = RNN_Decoder(FLAGS.embedding_dim, FLAGS.units, FLAGS.tokenizer_vocab_size, FLAGS.classifier_layers)
-
-optimizer = tf.keras.optimizers.Adam()
-
-chexnet = ChexnetWrapper('pretrained_models',FLAGS.visual_model_name, FLAGS.visual_model_pop_layers)
-
-ckpt = tf.train.Checkpoint(encoder=encoder,
-                           decoder=decoder,
-                           optimizer=optimizer)
-
-ckpt_manager = tf.train.CheckpointManager(ckpt, FLAGS.ckpt_path, max_to_keep=3)
-
-if ckpt_manager.latest_checkpoint:
-    start_epoch = int(ckpt_manager.latest_checkpoint.split('-')[-1])
-    ckpt.restore(ckpt_manager.latest_checkpoint)
-    print("Restored from checkpoint: {}".format(ckpt_manager.latest_checkpoint))
-
-
-def evaluate(tag_predictions, visual_features):
+def evaluate(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predictions, visual_features):
     attention_plot = np.zeros((FLAGS.max_sequence_length, 512))
 
     hidden = decoder.reset_state(batch_size=1)
@@ -100,13 +64,10 @@ def plot_attention(image, result, attention_plot):
     plt.show()
 
 
-total_loss = 0
+def save_output_prediction(FLAGS, img_name, target_sentence, predicted_sentence):
+    if not os.path.exists(FLAGS.output_images_folder):
+        os.makedirs(FLAGS.output_images_folder)
 
-if not os.path.exists(FLAGS.output_images_folder):
-    os.makedirs(FLAGS.output_images_folder)
-
-
-def save_output_prediction(img_name, target_sentence, predicted_sentence):
     image_path = os.path.join(FLAGS.image_directory, img_name)
 
     img = mpimg.imread(os.path.join(image_path))
@@ -124,26 +85,68 @@ def save_output_prediction(img_name, target_sentence, predicted_sentence):
     plt.close(fig)
 
 
-hypothesis = []
-references = []
-for batch in range(data_generator.steps):
-    print("Batch: {}".format(batch))
-    img, target, img_path = data_generator.__getitem__(batch)
-    tag_predictions, visual_feaures = chexnet.get_visual_features(img, FLAGS.tags_threshold)
-    if not FLAGS.tags_attention:
-        tag_predictions = None
-    result, attention_plot = evaluate(tag_predictions, visual_feaures)
-    target_word_list = tokenizer_wrapper.get_sentence_from_tokens(target)
-    references.append([target_word_list])
-    hypothesis.append(result)
-    target_sentence = tokenizer_wrapper.get_string_from_word_list(target_word_list)
-    predicted_sentence = tokenizer_wrapper.get_string_from_word_list(result)
-    save_output_prediction(img_path[0], target_sentence, predicted_sentence)
+def evaluate_enqueuer(enqueuer, steps, FLAGS, encoder, decoder, tokenizer_wrapper, chexnet, name='Test set',
+                      verbose=True, write_json=True):
+    hypothesis = []
+    references = []
+    if not enqueuer.is_running():
+        enqueuer.start(workers=FLAGS.generator_workers, max_queue_size=FLAGS.generator_queue_length)
 
-scores = get_bleu_scores(hypothesis, references)
-print(scores)
-with open(os.path.join(FLAGS.ckpt_path,'scores.json'), 'w') as fp:
-    json.dump(scores, fp, indent=4)
+    generator = enqueuer.get()
+    for batch in range(steps):
+        if verbose:
+            print("Step: {}".format(batch))
+        img, target, img_path = next(generator)
+        tag_predictions, visual_feaures = chexnet.get_visual_features(img, FLAGS.tags_threshold)
+        if not FLAGS.tags_attention:
+            tag_predictions = None
+        result, attention_plot = evaluate(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predictions, visual_feaures)
+        target_word_list = tokenizer_wrapper.get_sentence_from_tokens(target)
+        references.append([target_word_list])
+        hypothesis.append(result)
+        target_sentence = tokenizer_wrapper.get_string_from_word_list(target_word_list)
+        predicted_sentence = tokenizer_wrapper.get_string_from_word_list(result)
+        save_output_prediction(FLAGS, img_path[0], target_sentence, predicted_sentence)
+    enqueuer.stop()
+    scores = get_bleu_scores(hypothesis, references)
+    print("{} scores: {}".format(name, scores))
+    if write_json:
+        with open(os.path.join(FLAGS.ckpt_path, 'scores.json'), 'w') as fp:
+            json.dump(scores, fp, indent=4)
+
+    return scores
+
+
+if __name__ == "__main__":
+    FLAGS = argHandler()
+    FLAGS.setDefaults()
+
+    tokenizer_wrapper = TokenizerWrapper(FLAGS.all_data_csv, FLAGS.csv_label_columns[0],
+                                         FLAGS.max_sequence_length, FLAGS.tokenizer_vocab_size)
+
+    print("** load test generator **")
+
+    test_enqueuer, test_steps = get_enqueuer(FLAGS.test_csv, 1, FLAGS, tokenizer_wrapper)
+    test_enqueuer.start(workers=FLAGS.generator_workers, max_queue_size=FLAGS.generator_queue_length)
+
+    encoder = CNN_Encoder(FLAGS.embedding_dim, FLAGS.tags_reducer_units, FLAGS.encoder_layers)
+    decoder = RNN_Decoder(FLAGS.embedding_dim, FLAGS.units, FLAGS.tokenizer_vocab_size, FLAGS.classifier_layers)
+
+    optimizer = tf.keras.optimizers.Adam()
+
+    chexnet = ChexnetWrapper('pretrained_models', FLAGS.visual_model_name, FLAGS.visual_model_pop_layers)
+
+    ckpt = tf.train.Checkpoint(encoder=encoder,
+                               decoder=decoder,
+                               optimizer=optimizer)
+
+    ckpt_manager = tf.train.CheckpointManager(ckpt, FLAGS.ckpt_path, max_to_keep=1)
+
+    if ckpt_manager.latest_checkpoint:
+        start_epoch = int(ckpt_manager.latest_checkpoint.split('-')[-1])
+        ckpt.restore(ckpt_manager.latest_checkpoint)
+        print("Restored from checkpoint: {}".format(ckpt_manager.latest_checkpoint))
+    evaluate_enqueuer(test_enqueuer, test_steps, FLAGS, encoder, decoder, tokenizer_wrapper, chexnet)
 
 # # captions on the validation set
 # rid = np.random.randint(0, len(img_name_val))

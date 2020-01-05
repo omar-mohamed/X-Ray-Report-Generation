@@ -40,6 +40,8 @@ class argHandler(dict):
         self.define('tokenizer_vocab_size', 1001,
                     'The number of words to tokinze, the rest will be set as <unk>')
         self.define('batch_size', 90, 'batch size for training and testing')
+        self.define('generator_workers', 4, 'The number of cpu workers generating batches.')
+        self.define('generator_queue_length', 16, 'The maximum number of batches in the queue to be trained on.')
         self.define('tags_threshold', 0.2,
                     'The threshold from which to detect a tag.')
         self.define('ckpt_path', './checkpoints/',

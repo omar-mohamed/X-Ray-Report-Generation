@@ -3,15 +3,15 @@ from models.CNN_encoder import CNN_Encoder
 from models.RNN_decoder import RNN_Decoder
 from chexnet_wrapper import ChexnetWrapper
 from configs import argHandler
-from generator import AugmentedImageSequence
 import time
-from augmenter import augmenter
 from medical_w2v_wrapper import Medical_W2V_Wrapper
 from tokenizer_wrapper import TokenizerWrapper
 import matplotlib.pyplot as plt
-from utility import get_optimizer, load_model
+from utility import get_optimizer, get_enqueuer
 import os
 import json
+from augmenter import augmenter
+from test import evaluate_enqueuer
 
 FLAGS = argHandler()
 FLAGS.setDefaults()
@@ -19,19 +19,14 @@ FLAGS.setDefaults()
 tokenizer_wrapper = TokenizerWrapper(FLAGS.all_data_csv, FLAGS.csv_label_columns[0],
                                      FLAGS.max_sequence_length, FLAGS.tokenizer_vocab_size)
 
-data_generator = AugmentedImageSequence(
-    dataset_csv_file= FLAGS.train_csv,
-    class_names=FLAGS.csv_label_columns,
-    tokenizer_wrapper=tokenizer_wrapper,
-    source_image_dir=FLAGS.image_directory,
-    batch_size=FLAGS.batch_size,
-    target_size=FLAGS.image_target_size,
-    augmenter=augmenter,
-    shuffle_on_epoch_end=True,
-)
+train_enqueuer, train_steps = get_enqueuer(FLAGS.train_csv, FLAGS.batch_size, FLAGS, tokenizer_wrapper, augmenter)
+test_enqueuer, test_steps = get_enqueuer(FLAGS.test_csv, 1, FLAGS, tokenizer_wrapper)
+
+train_enqueuer.start(workers=FLAGS.generator_workers, max_queue_size=FLAGS.generator_queue_length)
 
 medical_w2v = Medical_W2V_Wrapper()
-embeddings = medical_w2v.get_embeddings_matrix_for_words(tokenizer_wrapper.get_word_tokens_list(), FLAGS.tokenizer_vocab_size)
+embeddings = medical_w2v.get_embeddings_matrix_for_words(tokenizer_wrapper.get_word_tokens_list(),
+                                                         FLAGS.tokenizer_vocab_size)
 tags_embeddings = medical_w2v.get_embeddings_matrix_for_tags(FLAGS.tags)
 print(f"Embeddings shape: {embeddings.shape}")
 print(f"Tags Embeddings shape: {tags_embeddings.shape}")
@@ -40,7 +35,6 @@ del medical_w2v
 
 encoder = CNN_Encoder(FLAGS.embedding_dim, FLAGS.tags_reducer_units, FLAGS.encoder_layers, tags_embeddings)
 decoder = RNN_Decoder(FLAGS.embedding_dim, FLAGS.units, FLAGS.tokenizer_vocab_size, FLAGS.classifier_layers, embeddings)
-
 
 optimizer = get_optimizer(FLAGS.optimizer_type, FLAGS.learning_rate)
 
@@ -91,7 +85,7 @@ def train_step(tag_predictions, visual_features, target):
     return loss, total_loss
 
 
-chexnet = ChexnetWrapper('pretrained_models',FLAGS.visual_model_name, FLAGS.visual_model_pop_layers)
+chexnet = ChexnetWrapper('pretrained_models', FLAGS.visual_model_name, FLAGS.visual_model_pop_layers)
 
 ckpt = tf.train.Checkpoint(encoder=encoder,
                            decoder=decoder,
@@ -102,8 +96,9 @@ try:
 except:
     print("path already exists")
 
-with open(os.path.join(FLAGS.ckpt_path,'configs.json'), 'w') as fp:
+with open(os.path.join(FLAGS.ckpt_path, 'configs.json'), 'w') as fp:
     json.dump(FLAGS, fp, indent=4)
+
 ckpt_manager = tf.train.CheckpointManager(ckpt, FLAGS.ckpt_path, max_to_keep=1)
 
 start_epoch = 0
@@ -112,45 +107,48 @@ if ckpt_manager.latest_checkpoint and FLAGS.continue_from_last_ckpt:
     ckpt.restore(ckpt_manager.latest_checkpoint)
     print("Restored from checkpoint: {}".format(ckpt_manager.latest_checkpoint))
 
+train_generator = train_enqueuer.get()
+
 for epoch in range(start_epoch, FLAGS.num_epochs):
     start = time.time()
     total_loss = 0
 
-    for batch in range(data_generator.steps):
+    for batch in range(train_steps):
         t = time.time()
-        img, target,_ = data_generator.__getitem__(batch)
-        print("Time to get batch: {} s ".format(time.time()-t))
+        img, target, _ = next(train_generator)
+        # print("Time to get batch: {} s ".format(time.time() - t))
         # print( target.max())
         t = time.time()
         tag_predictions, visual_feaures = chexnet.get_visual_features(img, FLAGS.tags_threshold)
         if not FLAGS.tags_attention:
             tag_predictions = None
-        print("Time to get visual features: {} s ".format(time.time()-t))
+        # print("Time to get visual features: {} s ".format(time.time() - t))
 
-        # img_tensor=np.random.randint(low=-1,high=1,size=(1,1024))
-        # img_tensor=np.float32(img_tensor)
         t = time.time()
         batch_loss, t_loss = train_step(tag_predictions, visual_feaures, target)
         total_loss += t_loss
-        print("Time to train step: {} s ".format(time.time()-t))
+        # print("Time to train step: {} s ".format(time.time() - t))
 
-        if batch % 20 == 0:
+        if batch % 20 == 0 and batch > 0:
             print('Epoch {} Batch {} Loss {:.4f}'.format(
                 epoch + 1, batch, batch_loss.numpy() / int(target.shape[1])))
     # storing the epoch end loss value to plot later
-    loss_plot.append(total_loss / data_generator.steps)
+    loss_plot.append(total_loss / train_steps)
 
     if epoch % 1 == 0:
         ckpt_manager.save()
+        print("Evaluating on test set..")
+        evaluate_enqueuer(test_enqueuer, test_steps, FLAGS, encoder, decoder, tokenizer_wrapper, chexnet, verbose=False)
 
     print('Epoch {} Loss {:.6f}'.format(epoch + 1,
-                                        total_loss / data_generator.steps))
+                                        total_loss / train_steps))
     print('Time taken for 1 epoch {} sec\n'.format(time.time() - start))
 
     plt.plot(loss_plot)
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
     plt.title('Loss Plot')
-    plt.savefig(FLAGS.ckpt_path+"/loss.png")
+    plt.savefig(FLAGS.ckpt_path + "/loss.png")
 
+train_enqueuer.stop()
 # plt.show()

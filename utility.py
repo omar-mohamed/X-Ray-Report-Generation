@@ -6,6 +6,25 @@ import os
 from tensorflow.keras.models import model_from_json
 import efficientnet.tfkeras
 from tensorflow.keras.layers import Dense, Dropout, Flatten
+from generator import AugmentedImageSequence
+from tensorflow.keras.utils import OrderedEnqueuer
+
+def get_enqueuer(csv,batch_size, FLAGS, tokenizer_wrapper, augmenter=None):
+    data_generator = AugmentedImageSequence(
+        dataset_csv_file=csv,
+        class_names=FLAGS.csv_label_columns,
+        tokenizer_wrapper=tokenizer_wrapper,
+        source_image_dir=FLAGS.image_directory,
+        batch_size=batch_size,
+        target_size=FLAGS.image_target_size,
+        augmenter=augmenter,
+        shuffle_on_epoch_end=True,
+    )
+    enqueuer = OrderedEnqueuer(data_generator,
+                               use_multiprocessing=False,
+                               shuffle=False)
+    return enqueuer, data_generator.steps
+
 
 def get_layers(layer_sizes, activation = 'relu'):
     layers = []
