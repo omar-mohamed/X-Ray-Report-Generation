@@ -143,7 +143,7 @@ for epoch in range(start_epoch, FLAGS.num_epochs):
 
     if epoch % 1 == 0:
         ckpt_manager.save()
-        if epoch % 5 == 0 and epoch>0:
+        if (epoch+1) % 5 == 0 and epoch>0:
             print("Evaluating on test set..")
             evaluate_enqueuer(test_enqueuer, test_steps, FLAGS, encoder, decoder, tokenizer_wrapper, chexnet)
 
