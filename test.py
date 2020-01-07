@@ -12,6 +12,7 @@ from utility import get_enqueuer
 import numpy as np
 from PIL import Image
 import json
+import time
 
 
 def evaluate(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predictions, visual_features):
@@ -86,33 +87,50 @@ def save_output_prediction(FLAGS, img_name, target_sentence, predicted_sentence)
 
 
 def evaluate_enqueuer(enqueuer, steps, FLAGS, encoder, decoder, tokenizer_wrapper, chexnet, name='Test set',
-                      verbose=True, write_json=True):
+                      verbose=True, write_json=True, write_images=False):
     hypothesis = []
     references = []
     if not enqueuer.is_running():
         enqueuer.start(workers=FLAGS.generator_workers, max_queue_size=FLAGS.generator_queue_length)
+    start = time.time()
 
     generator = enqueuer.get()
     for batch in range(steps):
-        if verbose:
+        if verbose and batch > 0 and batch % 100 == 0:
             print("Step: {}".format(batch))
+        t = time.time()
+
         img, target, img_path = next(generator)
+        # print("Time to get batch: {} s ".format(time.time() - t))
+        # t = time.time()
+
         tag_predictions, visual_feaures = chexnet.get_visual_features(img, FLAGS.tags_threshold)
+        # print("Time to get visual features: {} s ".format(time.time() - t))
+
         if not FLAGS.tags_attention:
             tag_predictions = None
+        # t = time.time()
+
         result, attention_plot = evaluate(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predictions, visual_feaures)
+        # print("Time to evaluate step: {} s ".format(time.time() - t))
+
         target_word_list = tokenizer_wrapper.get_sentence_from_tokens(target)
         references.append([target_word_list])
         hypothesis.append(result)
         target_sentence = tokenizer_wrapper.get_string_from_word_list(target_word_list)
         predicted_sentence = tokenizer_wrapper.get_string_from_word_list(result)
-        save_output_prediction(FLAGS, img_path[0], target_sentence, predicted_sentence)
+        # t = time.time()
+        if write_images:
+            save_output_prediction(FLAGS, img_path[0], target_sentence, predicted_sentence)
+        # print('Time taken for saving image {} sec\n'.format(time.time() - t))
+
     enqueuer.stop()
     scores = get_bleu_scores(hypothesis, references)
     print("{} scores: {}".format(name, scores))
     if write_json:
         with open(os.path.join(FLAGS.ckpt_path, 'scores.json'), 'w') as fp:
             json.dump(scores, fp, indent=4)
+    print('Time taken for evaluation {} sec\n'.format(time.time() - start))
 
     return scores
 
@@ -146,7 +164,8 @@ if __name__ == "__main__":
         start_epoch = int(ckpt_manager.latest_checkpoint.split('-')[-1])
         ckpt.restore(ckpt_manager.latest_checkpoint)
         print("Restored from checkpoint: {}".format(ckpt_manager.latest_checkpoint))
-    evaluate_enqueuer(test_enqueuer, test_steps, FLAGS, encoder, decoder, tokenizer_wrapper, chexnet)
+    evaluate_enqueuer(test_enqueuer, test_steps, FLAGS, encoder, decoder, tokenizer_wrapper, chexnet,
+                      write_images=True)
 
 # # captions on the validation set
 # rid = np.random.randint(0, len(img_name_val))

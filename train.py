@@ -25,6 +25,7 @@ test_enqueuer, test_steps = get_enqueuer(FLAGS.test_csv, 1, FLAGS, tokenizer_wra
 train_enqueuer.start(workers=FLAGS.generator_workers, max_queue_size=FLAGS.generator_queue_length)
 
 medical_w2v = Medical_W2V_Wrapper()
+medical_w2v.save_embeddings(tokenizer_wrapper.get_word_tokens_list())
 embeddings = medical_w2v.get_embeddings_matrix_for_words(tokenizer_wrapper.get_word_tokens_list(),
                                                          FLAGS.tokenizer_vocab_size)
 tags_embeddings = medical_w2v.get_embeddings_matrix_for_tags(FLAGS.tags)
@@ -108,23 +109,24 @@ if ckpt_manager.latest_checkpoint and FLAGS.continue_from_last_ckpt:
     print("Restored from checkpoint: {}".format(ckpt_manager.latest_checkpoint))
 
 train_generator = train_enqueuer.get()
-
 for epoch in range(start_epoch, FLAGS.num_epochs):
     start = time.time()
     total_loss = 0
-
+    times_to_get_batch=0
     for batch in range(train_steps):
         t = time.time()
         img, target, _ = next(train_generator)
         # print("Time to get batch: {} s ".format(time.time() - t))
+        if time.time() - t>2:
+            times_to_get_batch+=1
         # print( target.max())
-        t = time.time()
+        # t = time.time()
         tag_predictions, visual_feaures = chexnet.get_visual_features(img, FLAGS.tags_threshold)
         if not FLAGS.tags_attention:
             tag_predictions = None
         # print("Time to get visual features: {} s ".format(time.time() - t))
 
-        t = time.time()
+        # t = time.time()
         batch_loss, t_loss = train_step(tag_predictions, visual_feaures, target)
         total_loss += t_loss
         # print("Time to train step: {} s ".format(time.time() - t))
@@ -134,15 +136,18 @@ for epoch in range(start_epoch, FLAGS.num_epochs):
                 epoch + 1, batch, batch_loss.numpy() / int(target.shape[1])))
     # storing the epoch end loss value to plot later
     loss_plot.append(total_loss / train_steps)
-
-    if epoch % 1 == 0:
-        ckpt_manager.save()
-        print("Evaluating on test set..")
-        evaluate_enqueuer(test_enqueuer, test_steps, FLAGS, encoder, decoder, tokenizer_wrapper, chexnet, verbose=False)
-
     print('Epoch {} Loss {:.6f}'.format(epoch + 1,
                                         total_loss / train_steps))
     print('Time taken for 1 epoch {} sec\n'.format(time.time() - start))
+    print('Batches that took long: {}'.format(times_to_get_batch))
+
+    if epoch % 1 == 0:
+        ckpt_manager.save()
+        if epoch % 5 == 0 and epoch>0:
+            print("Evaluating on test set..")
+            evaluate_enqueuer(test_enqueuer, test_steps, FLAGS, encoder, decoder, tokenizer_wrapper, chexnet)
+
+
 
     plt.plot(loss_plot)
     plt.xlabel('Epochs')

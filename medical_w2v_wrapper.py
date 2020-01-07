@@ -1,12 +1,17 @@
 import gensim
 import numpy as np
-
+import pickle
+import os
 
 class Medical_W2V_Wrapper:
     def __init__(self):
-        self.word_embeddings = gensim.models.KeyedVectors.load_word2vec_format(
-            "medical_word_embeddings/pubmed2018_w2v_400D.bin",
-            binary=True)
+        if os.path.isfile("medical_word_embeddings/saved_embeddings.pickle"):
+            with open('medical_word_embeddings/saved_embeddings.pickle', 'rb') as handle:
+                self.word_embeddings = pickle.load(handle)
+        else:
+            self.word_embeddings = gensim.models.KeyedVectors.load_word2vec_format(
+                "medical_word_embeddings/pubmed2018_w2v_400D.bin",
+                binary=True)
 
     def get_embeddings_matrix_for_words(self, word_tokens, vocab_size):
         embeddings = np.zeros(shape=(vocab_size, self.word_embeddings['the'].shape[0]))
@@ -37,3 +42,17 @@ class Medical_W2V_Wrapper:
 
             token += 1
         return embeddings
+
+    def save_embeddings(self, word_tokens):
+        word_counter = 0
+        dictionary={}
+        for word, token in word_tokens.items():
+            try:
+                dictionary[word] = self.word_embeddings[word]
+            except:
+                dictionary[word] = np.zeros(shape= self.word_embeddings['the'].shape[0])
+
+            word_counter += 1
+        print("saved {} words".format(word_counter))
+        with open('medical_word_embeddings/saved_embeddings.pickle', 'wb') as handle:
+            pickle.dump(dictionary, handle, protocol=pickle.HIGHEST_PROTOCOL)
