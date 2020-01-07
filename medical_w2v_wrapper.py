@@ -17,9 +17,9 @@ class Medical_W2V_Wrapper:
         embeddings = np.zeros(shape=(vocab_size, self.word_embeddings['the'].shape[0]))
         word_counter = 0
         for word, token in word_tokens.items():
-            try:
-                embeddings[token, :] = self.word_embeddings[word]
-            except:
+            if word in self.word_embeddings:
+                embeddings[token-1, :] = self.word_embeddings[word]
+            else:
                 print("Word: {} not found in medical word embeddings".format(word))
             word_counter += 1
             if word_counter == vocab_size:
@@ -43,15 +43,25 @@ class Medical_W2V_Wrapper:
             token += 1
         return embeddings
 
-    def save_embeddings(self, word_tokens):
+    def save_embeddings(self, word_tokens, tags):
         word_counter = 0
         dictionary={}
         for word, token in word_tokens.items():
-            try:
+            if word in self.word_embeddings:
                 dictionary[word] = self.word_embeddings[word]
-            except:
+            else:
                 dictionary[word] = np.zeros(shape= self.word_embeddings['the'].shape[0])
 
+            word_counter += 1
+        for word in tags:
+            if word in self.word_embeddings:
+                dictionary[word] = self.word_embeddings[word]
+            else:
+                sentence = word.split()
+                sentence_vec = np.zeros(self.word_embeddings['the'].shape[0])
+                for sub_word in sentence:
+                    sentence_vec += self.word_embeddings[sub_word]
+                dictionary[word]=sentence_vec
             word_counter += 1
         print("saved {} words".format(word_counter))
         with open('medical_word_embeddings/saved_embeddings.pickle', 'wb') as handle:
