@@ -14,11 +14,11 @@ class Medical_W2V_Wrapper:
                 binary=True)
 
     def get_embeddings_matrix_for_words(self, word_tokens, vocab_size):
-        embeddings = np.zeros(shape=(vocab_size, self.word_embeddings['the'].shape[0]))
+        embeddings = np.zeros(shape=(vocab_size+1, self.word_embeddings['the'].shape[0]))
         word_counter = 0
         for word, token in word_tokens.items():
             if word in self.word_embeddings:
-                embeddings[token-1, :] = self.word_embeddings[word]
+                embeddings[token, :] = self.word_embeddings[word]
             else:
                 print("Word: {} not found in medical word embeddings".format(word))
             word_counter += 1
