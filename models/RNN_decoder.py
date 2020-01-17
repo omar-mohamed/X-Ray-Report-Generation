@@ -13,7 +13,7 @@ class RNN_Decoder(tf.keras.Model):
                                                        ,trainable=True)
 
         else:
-            self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim)
+            self.embedding = tf.keras.layers.Embedding(vocab_size+1, embedding_dim)
 
         self.gru = tf.keras.layers.GRU(self.units,
                                        return_sequences=True,
@@ -42,7 +42,7 @@ class RNN_Decoder(tf.keras.Model):
 
         # passing the concatenated vector to the GRU
         output, state = self.gru(x)
-        # output, _ = self.gru2(output)
+        # output, state = self.gru2(output)
 
         # shape == (batch_size, max_length, hidden_size)
         x = self.fc1(output)

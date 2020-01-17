@@ -16,7 +16,7 @@ class CNN_Encoder(tf.keras.Model):
             self.tags_reducer = tf.keras.layers.Dense(tags_reducer_units)
         self.tags_reducer_units = tags_reducer_units
         self.encoder_layers=get_layers(encoder_layers, 'relu')
-        self.fc = tf.keras.layers.Dense(embedding_dim, activation = 'relu')
+        # self.fc = tf.keras.layers.Dense(embedding_dim, activation = 'relu')
 
     def call(self, visual_features, tags_predictions = None):
 
@@ -33,6 +33,6 @@ class CNN_Encoder(tf.keras.Model):
         for layer in self.encoder_layers:
             features = layer(features)
 
-        features = self.fc(features)
+        # features = self.fc(features)
 
         return features

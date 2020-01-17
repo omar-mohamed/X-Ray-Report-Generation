@@ -25,7 +25,7 @@ test_enqueuer, test_steps = get_enqueuer(FLAGS.test_csv, 1, FLAGS, tokenizer_wra
 train_enqueuer.start(workers=FLAGS.generator_workers, max_queue_size=FLAGS.generator_queue_length)
 
 medical_w2v = Medical_W2V_Wrapper()
-# medical_w2v.save_embeddings(tokenizer_wrapper.get_word_tokens_list())
+# medical_w2v.save_embeddings(tokenizer_wrapper.get_word_tokens_list(),FLAGS.tags)
 embeddings = medical_w2v.get_embeddings_matrix_for_words(tokenizer_wrapper.get_word_tokens_list(),
                                                          FLAGS.tokenizer_vocab_size)
 tags_embeddings = medical_w2v.get_embeddings_matrix_for_tags(FLAGS.tags)
@@ -145,8 +145,9 @@ for epoch in range(start_epoch, FLAGS.num_epochs):
         ckpt_manager.save()
         if (epoch+1) % 5 == 0 and epoch>0:
             print("Evaluating on test set..")
+            train_enqueuer.stop()
             evaluate_enqueuer(test_enqueuer, test_steps, FLAGS, encoder, decoder, tokenizer_wrapper, chexnet)
-
+            train_enqueuer.start(workers=FLAGS.generator_workers, max_queue_size=FLAGS.generator_queue_length)
 
 
     plt.plot(loss_plot)

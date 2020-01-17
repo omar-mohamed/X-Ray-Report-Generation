@@ -7,7 +7,7 @@ from configs import argHandler
 from tokenizer_wrapper import TokenizerWrapper
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
-from caption_evaluation import get_bleu_scores
+from caption_evaluation import get_evalutation_scores
 from utility import get_enqueuer
 import numpy as np
 from PIL import Image
@@ -34,7 +34,7 @@ def evaluate(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predictions, visual
         softmax_predictions = tf.nn.softmax(tf.cast(predictions[0], dtype=tf.float64))
         predicted_id = 1
         counter = 0
-        while predicted_id == 1 and counter < 10:
+        while (predicted_id == 1 and counter < 10) or (tokenizer_wrapper.get_word_from_token(predicted_id)=='endseq' and len(result)==0):
             predicted_id = np.random.choice(len(predictions[0]), p=softmax_predictions)
             counter += 1
         if tokenizer_wrapper.get_word_from_token(predicted_id) == 'endseq':
@@ -87,7 +87,7 @@ def save_output_prediction(FLAGS, img_name, target_sentence, predicted_sentence)
 
 
 def evaluate_enqueuer(enqueuer, steps, FLAGS, encoder, decoder, tokenizer_wrapper, chexnet, name='Test set',
-                      verbose=True, write_json=True, write_images=False):
+                      verbose=True, write_json=True, write_images=False, test_mode=False):
     hypothesis = []
     references = []
     if not enqueuer.is_running():
@@ -125,11 +125,11 @@ def evaluate_enqueuer(enqueuer, steps, FLAGS, encoder, decoder, tokenizer_wrappe
         # print('Time taken for saving image {} sec\n'.format(time.time() - t))
 
     enqueuer.stop()
-    scores = get_bleu_scores(hypothesis, references)
+    scores = get_evalutation_scores(hypothesis, references, test_mode)
     print("{} scores: {}".format(name, scores))
     if write_json:
         with open(os.path.join(FLAGS.ckpt_path, 'scores.json'), 'w') as fp:
-            json.dump(scores, fp, indent=4)
+            json.dump(str(scores), fp, indent=4)
     print('Time taken for evaluation {} sec\n'.format(time.time() - start))
 
     return scores
@@ -165,7 +165,7 @@ if __name__ == "__main__":
         ckpt.restore(ckpt_manager.latest_checkpoint)
         print("Restored from checkpoint: {}".format(ckpt_manager.latest_checkpoint))
     evaluate_enqueuer(test_enqueuer, test_steps, FLAGS, encoder, decoder, tokenizer_wrapper, chexnet,
-                      write_images=True)
+                      write_images=True, test_mode=True)
 
 # # captions on the validation set
 # rid = np.random.randint(0, len(img_name_val))
