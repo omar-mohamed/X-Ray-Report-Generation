@@ -27,7 +27,7 @@ class BeamPaths():
         return len(self.paths)
 
     def sort(self, remove_extra=True):
-        self.paths.sort(key=lambda x: x.get_total_probability(), reverse=True)
+        self.paths.sort(key=lambda x: x.get_total_probability())
         if remove_extra:
             self.paths=self.paths[0:self.k]
 
