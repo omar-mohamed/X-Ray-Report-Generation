@@ -31,6 +31,11 @@ class BeamPaths():
         if remove_extra:
             self.paths=self.paths[0:self.k]
 
+    def add_top_k_paths(self,paths):
+        paths.sort(key=lambda x: x.get_total_probability())
+        for i in range(self.k):
+            self.add_path(paths[i])
+
     def get_best_k(self):
         return self.paths[0:self.k]
 

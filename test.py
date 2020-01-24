@@ -16,39 +16,14 @@ import time
 from beam_search.beam_path import BeamPath
 from beam_search.beam_paths import BeamPaths
 from copy import deepcopy
-# def search(model, src_input, k=1, sequence_max_len=25):
-#     # (log(1), initialize_of_zeros)
-#     k_beam = [(0, [0]*(sequence_max_len+1))]
-#
-#     # l : point on target sentence to predict
-#     for l in range(sequence_max_len):
-#         all_k_beams = []
-#         for prob, sent_predict in k_beam:
-#             predicted = model.predict([np.array([src_input]), np.array([sent_predict])])[0]
-#             # top k!
-#             possible_k = predicted[l].argsort()[-k:][::-1]
-#
-#             # add to all possible candidates for k-beams
-#             all_k_beams += [
-#                 (
-#                     sum(np.log(predicted[i][sent_predict[i+1]]) for i in range(l)) + np.log(predicted[l][next_wid]),
-#                     list(sent_predict[:l+1])+[next_wid]+[0]*(sequence_max_len-l-1)
-#                 )
-#                 for next_wid in possible_k
-#             ]
-#
-#         # top k
-#         k_beam = sorted(all_k_beams)[-k:]
-#
-#     return k_beam
 
-def find_k_largest(x,k,allow_end_seq=True,end_seq_token=0):
+
+def find_k_largest(x, k, allow_end_seq=True, end_seq_token=0):
     x = np.array(x)
     if not allow_end_seq:
         x[end_seq_token] = 0
     ind = np.argpartition(x, -k)[-k:]
-    return ind[np.argsort(tf.gather(x,ind))]
-
+    return ind[np.argsort(tf.gather(x, ind))]
 
 
 def evaluate_beam_search(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predictions, visual_features, k):
@@ -57,29 +32,35 @@ def evaluate_beam_search(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predict
     dec_input = tf.expand_dims([tokenizer_wrapper.get_token_of_word("startseq")], 0)
     predictions, hidden, _ = decoder(dec_input, features, hidden)
     predictions = tf.nn.softmax(tf.cast(predictions[0], dtype=tf.float64))
-    k_largest_ind = find_k_largest(predictions,k,False,tokenizer_wrapper.get_token_of_word("endseq"))
-    beam_paths=BeamPaths(k)
+    k_largest_ind = find_k_largest(predictions, k, False, tokenizer_wrapper.get_token_of_word("endseq"))
+    beam_paths = BeamPaths(k)
     for i in range(k):
-        beam_paths.add_path(BeamPath(tokenizer_wrapper,FLAGS.max_sequence_length,[k_largest_ind[i]],hidden,[predictions[k_largest_ind[i]]]))
-    while beam_paths.get_ended_paths_count()<k or beam_paths.get_running_paths_count() > 0:
+        beam_paths.add_path(BeamPath(tokenizer_wrapper, FLAGS.max_sequence_length, [k_largest_ind[i]], hidden,
+                                     [predictions[k_largest_ind[i]]]))
+    while beam_paths.get_ended_paths_count() < k or beam_paths.get_running_paths_count() > 0:
         beam_paths.sort()
         hidden = beam_paths.get_best_paths_hidden()
         dec_input = beam_paths.get_best_paths_input()
         best_paths = beam_paths.get_best_k()
+
         beam_paths.clear()
+
         # print("________________________")
         # for path in best_paths:
         #     print("Path: {}".format(path.get_sentence_words()))
+        new_paths = []
         predictions, hidden, _ = decoder(dec_input, features, hidden)
         for i in range(predictions.shape[0]):
-            preds=tf.nn.softmax(tf.cast(predictions[i], dtype=tf.float64))
+            preds = tf.nn.softmax(tf.cast(predictions[i], dtype=tf.float64))
             k_largest_ind = find_k_largest(preds, k)
             for index in k_largest_ind:
                 new_path = deepcopy(best_paths[i])
-                new_path.add_record(index,preds[index],tf.expand_dims(hidden[i],0))
-                beam_paths.add_path(new_path)
+                new_path.add_record(index, preds[index], tf.expand_dims(hidden[i], 0))
+                new_paths.append(new_path)
+        beam_paths.add_top_k_paths(new_paths)
     best_paths = beam_paths.get_ended_paths()
     return best_paths[0].get_sentence_words()
+
 
 def evaluate(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predictions, visual_features):
     attention_plot = np.zeros((FLAGS.max_sequence_length, 512))
@@ -99,7 +80,8 @@ def evaluate(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predictions, visual
         softmax_predictions = tf.nn.softmax(tf.cast(predictions[0], dtype=tf.float64))
         predicted_id = 1
         counter = 0
-        while (predicted_id == 1 and counter < 10) or (tokenizer_wrapper.get_word_from_token(predicted_id)=='endseq' and len(result)==0):
+        while (predicted_id == 1 and counter < 10) or (
+                tokenizer_wrapper.get_word_from_token(predicted_id) == 'endseq' and len(result) == 0):
             predicted_id = np.random.choice(len(predictions[0]), p=softmax_predictions)
             counter += 1
         if tokenizer_wrapper.get_word_from_token(predicted_id) == 'endseq':
@@ -176,9 +158,11 @@ def evaluate_enqueuer(enqueuer, steps, FLAGS, encoder, decoder, tokenizer_wrappe
             tag_predictions = None
         # t = time.time()
         if beam_search_k > 1:
-            result = evaluate_beam_search(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predictions, visual_feaures, beam_search_k)
+            result = evaluate_beam_search(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predictions, visual_feaures,
+                                          beam_search_k)
         else:
-            result, attention_plot = evaluate(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predictions, visual_feaures)
+            result, attention_plot = evaluate(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predictions,
+                                              visual_feaures)
         # print("Time to evaluate step: {} s ".format(time.time() - t))
 
         target_word_list = tokenizer_wrapper.get_sentence_from_tokens(target)
@@ -232,7 +216,7 @@ if __name__ == "__main__":
         ckpt.restore(ckpt_manager.latest_checkpoint)
         print("Restored from checkpoint: {}".format(ckpt_manager.latest_checkpoint))
     evaluate_enqueuer(test_enqueuer, test_steps, FLAGS, encoder, decoder, tokenizer_wrapper, chexnet,
-                      write_images=True, test_mode=True , beam_search_k= 3)
+                      write_images=True, test_mode=True, beam_search_k=3)
 
 # # captions on the validation set
 # rid = np.random.randint(0, len(img_name_val))
