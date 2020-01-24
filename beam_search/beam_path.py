@@ -1,11 +1,12 @@
 import tensorflow as tf
 import numpy as np
+from copy import deepcopy
 class BeamPath():
-    def __init__(self,tokinizer_wrapper, max_sentence_length, sentence_tokens=[], hidden=None, prob=[]):
+    def __init__(self, tokenizer_wrapper, max_sentence_length, sentence_tokens=[], hidden=None, prob=[]):
         self.sentence_tokens=sentence_tokens
         self.hidden = hidden
         self.prob = prob
-        self.tokenizer_wrapper=tokinizer_wrapper
+        self.tokenizer_wrapper=tokenizer_wrapper
         self.max_sentence_length = max_sentence_length
 
     def ended(self):
@@ -20,6 +21,11 @@ class BeamPath():
             if word != 'endseq':
                 words.append(word)
         return words
+
+    def __deepcopy__(self, memodict={}):
+        copy = BeamPath(self.tokenizer_wrapper,self.max_sentence_length, deepcopy(self.sentence_tokens),deepcopy(self.hidden),deepcopy(self.prob))
+        return copy
+
     def add_token(self,token):
         self.sentence_tokens.append(token)
 
