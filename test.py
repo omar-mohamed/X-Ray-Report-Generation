@@ -42,7 +42,10 @@ from copy import deepcopy
 #
 #     return k_beam
 
-def find_k_largest(x,k):
+def find_k_largest(x,k,allow_end_seq=True,end_seq_token=0):
+    x = np.array(x)
+    if not allow_end_seq:
+        x[end_seq_token] = 0
     ind = np.argpartition(x, -k)[-k:]
     return ind[np.argsort(tf.gather(x,ind))]
 
@@ -54,7 +57,7 @@ def evaluate_beam_search(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predict
     dec_input = tf.expand_dims([tokenizer_wrapper.get_token_of_word("startseq")], 0)
     predictions, hidden, _ = decoder(dec_input, features, hidden)
     predictions = tf.nn.softmax(tf.cast(predictions[0], dtype=tf.float64))
-    k_largest_ind = find_k_largest(predictions,k)
+    k_largest_ind = find_k_largest(predictions,k,False,tokenizer_wrapper.get_token_of_word("endseq"))
     beam_paths=BeamPaths(k)
     for i in range(k):
         beam_paths.add_path(BeamPath(tokenizer_wrapper,FLAGS.max_sequence_length,[k_largest_ind[i]],hidden,[predictions[k_largest_ind[i]]]))
@@ -68,7 +71,7 @@ def evaluate_beam_search(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predict
         # for path in best_paths:
         #     print("Path: {}".format(path.get_sentence_words()))
         predictions, hidden, _ = decoder(dec_input, features, hidden)
-        for i in range(k):
+        for i in range(predictions.shape[0]):
             preds=tf.nn.softmax(tf.cast(predictions[i], dtype=tf.float64))
             k_largest_ind = find_k_largest(preds, k)
             for index in k_largest_ind:

@@ -17,7 +17,7 @@ class BeamPaths():
         return self.paths[0]
 
     def get_ended_paths(self):
-        self.ended_paths.sort(key=lambda x: x.get_total_probability(), reverse=True)
+        self.ended_paths.sort(key=lambda x: x.get_total_probability())
         return self.ended_paths
 
     def get_ended_paths_count(self):
@@ -39,14 +39,14 @@ class BeamPaths():
 
     def get_best_paths_input(self):
         tokens=[]
-        for i in range(self.k):
+        for i in range(len(self.paths)):
             tokens.append(self.paths[i].get_last_token())
         return tf.expand_dims(tokens, 1)
 
     def get_best_paths_hidden(self):
         hidden_size=self.paths[0].get_hidden_size()
-        hidden = np.zeros(shape=(self.k, hidden_size[1]))
-        for i in range(self.k):
+        hidden = np.zeros(shape=(len(self.paths), hidden_size[1]))
+        for i in range(len(self.paths)):
             hidden[i]=self.paths[i].get_hidden_layer()[0]
 
         return hidden
