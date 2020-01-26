@@ -45,7 +45,7 @@ class BeamPath():
         return self.sentence_tokens[-1]
 
     def get_total_probability(self):
-        return np.sum(-np.log(self.prob))
+        return (1/(len(self.sentence_tokens)))*np.sum(-np.log(self.prob))
 
     def get_hidden_size(self):
         return self.hidden.shape
