@@ -44,6 +44,9 @@ class BeamPath():
     def get_last_token(self):
         return self.sentence_tokens[-1]
 
+    def get_prob_list(self):
+        return self.prob
+
     def get_total_probability(self):
         return (1/(len(self.sentence_tokens)))*np.sum(-np.log(self.prob))
 
