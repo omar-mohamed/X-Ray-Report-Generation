@@ -37,32 +37,34 @@ def evaluate_beam_search(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predict
     for i in range(k):
         beam_paths.add_path(BeamPath(tokenizer_wrapper, FLAGS.max_sequence_length, [k_largest_ind[i]], hidden,
                                      [predictions[k_largest_ind[i]]]))
-    while beam_paths.get_ended_paths_count() < k or beam_paths.get_running_paths_count() > 0:
+    while not beam_paths.should_stop():
         beam_paths.sort()
         hidden = beam_paths.get_best_paths_hidden()
         dec_input = beam_paths.get_best_paths_input()
         best_paths = beam_paths.get_best_k()
 
-        beam_paths.clear()
+        beam_paths.pop_best_k()
 
-        # print("________________________")
-        # for path in best_paths:
-        #     print("Path: {}".format(path.get_sentence_words()))
-        new_paths = []
+        print("________________________")
+        for path in best_paths:
+            print("Path: {}".format(path.get_sentence_words()))
+        # new_paths = []
         t = time.time()
         predictions, hidden, _ = decoder(dec_input, features, hidden)
-        # print("time taken to predict: {}".format(time.time()-t))
+        print("time taken to predict: {}".format(time.time()-t))
         t = time.time()
 
         for i in range(predictions.shape[0]):
             preds = tf.nn.softmax(tf.cast(predictions[i], dtype=tf.float64))
-            k_largest_ind = find_k_largest(preds, k)
-            for index in k_largest_ind:
+            # k_largest_ind = find_k_largest(preds, k)
+            for index in range(preds.shape[0]):
+
                 new_path = deepcopy(best_paths[i])
                 new_path.add_record(index, preds[index], tf.expand_dims(hidden[i], 0))
-                new_paths.append(new_path)
-        beam_paths.add_top_k_paths(new_paths)
-        # print("time taken to add paths: {}".format(time.time()-t))
+                beam_paths.add_path(new_path)
+                # new_paths.append(new_path)
+        # beam_paths.add_top_k_paths(new_paths)
+        print("time taken to add paths: {}".format(time.time()-t))
 
     # best_paths = beam_paths.get_ended_paths()
     # for path in best_paths:
@@ -156,7 +158,7 @@ def evaluate_enqueuer(enqueuer, steps, FLAGS, encoder, decoder, tokenizer_wrappe
 
     generator = enqueuer.get()
     for batch in range(steps):
-        if verbose and batch > 0 and batch % 100 == 0:
+        if verbose and batch > 0 and batch % 1 == 0:
             print("Step: {}".format(batch))
         t = time.time()
         img, target, img_path = next(generator)
