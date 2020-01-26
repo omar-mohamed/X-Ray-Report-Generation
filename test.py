@@ -49,7 +49,11 @@ def evaluate_beam_search(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predict
         # for path in best_paths:
         #     print("Path: {}".format(path.get_sentence_words()))
         new_paths = []
+        t = time.time()
         predictions, hidden, _ = decoder(dec_input, features, hidden)
+        # print("time taken to predict: {}".format(time.time()-t))
+        t = time.time()
+
         for i in range(predictions.shape[0]):
             preds = tf.nn.softmax(tf.cast(predictions[i], dtype=tf.float64))
             k_largest_ind = find_k_largest(preds, k)
@@ -58,7 +62,16 @@ def evaluate_beam_search(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predict
                 new_path.add_record(index, preds[index], tf.expand_dims(hidden[i], 0))
                 new_paths.append(new_path)
         beam_paths.add_top_k_paths(new_paths)
-    best_paths = beam_paths.get_ended_paths()
+        # print("time taken to add paths: {}".format(time.time()-t))
+
+    # best_paths = beam_paths.get_ended_paths()
+    # for path in best_paths:
+    #     print(path.get_sentence_words())
+    #     print(path.get_prob_list())
+    #     print(path.get_total_probability())
+    #     print("--------")
+    # print("____________________________________")
+
     return best_paths[0].get_sentence_words()
 
 
@@ -146,10 +159,9 @@ def evaluate_enqueuer(enqueuer, steps, FLAGS, encoder, decoder, tokenizer_wrappe
         if verbose and batch > 0 and batch % 100 == 0:
             print("Step: {}".format(batch))
         t = time.time()
-
         img, target, img_path = next(generator)
         # print("Time to get batch: {} s ".format(time.time() - t))
-        # t = time.time()
+        #
 
         tag_predictions, visual_feaures = chexnet.get_visual_features(img, FLAGS.tags_threshold)
         # print("Time to get visual features: {} s ".format(time.time() - t))

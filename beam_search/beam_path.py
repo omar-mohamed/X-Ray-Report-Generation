@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 from copy import deepcopy
+
 class BeamPath():
     def __init__(self, tokenizer_wrapper, max_sentence_length, sentence_tokens=[], hidden=None, prob=[]):
         self.sentence_tokens=sentence_tokens
@@ -23,7 +24,7 @@ class BeamPath():
         return words
 
     def __deepcopy__(self, memodict={}):
-        copy = BeamPath(self.tokenizer_wrapper,self.max_sentence_length, deepcopy(self.sentence_tokens),deepcopy(self.hidden),deepcopy(self.prob))
+        copy = BeamPath(self.tokenizer_wrapper,self.max_sentence_length, [i for i in self.sentence_tokens], self.hidden, [i for i in self.prob])
         return copy
 
     def add_token(self,token):
