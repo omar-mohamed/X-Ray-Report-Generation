@@ -38,20 +38,24 @@ def evaluate_beam_search(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predict
         beam_paths.add_path(BeamPath(tokenizer_wrapper, FLAGS.max_sequence_length, [k_largest_ind[i]], hidden,
                                      [predictions[k_largest_ind[i]]]))
     while not beam_paths.should_stop():
+        t = time.time()
+
         beam_paths.sort()
+        # print("time taken to sort: {}".format(time.time()-t))
+
         hidden = beam_paths.get_best_paths_hidden()
         dec_input = beam_paths.get_best_paths_input()
         best_paths = beam_paths.get_best_k()
 
         beam_paths.pop_best_k()
 
-        print("________________________")
-        for path in best_paths:
-            print("Path: {}".format(path.get_sentence_words()))
+        # print("________________________")
+        # for path in best_paths:
+        #     print("Path: {}".format(path.get_sentence_words()))
         # new_paths = []
         t = time.time()
         predictions, hidden, _ = decoder(dec_input, features, hidden)
-        print("time taken to predict: {}".format(time.time()-t))
+        # print("time taken to predict: {}".format(time.time()-t))
         t = time.time()
 
         for i in range(predictions.shape[0]):
@@ -64,9 +68,9 @@ def evaluate_beam_search(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predict
                 beam_paths.add_path(new_path)
                 # new_paths.append(new_path)
         # beam_paths.add_top_k_paths(new_paths)
-        print("time taken to add paths: {}".format(time.time()-t))
+        # print("time taken to add paths: {}".format(time.time()-t))
 
-    # best_paths = beam_paths.get_ended_paths()
+    best_paths = beam_paths.get_ended_paths()
     # for path in best_paths:
     #     print(path.get_sentence_words())
     #     print(path.get_prob_list())
