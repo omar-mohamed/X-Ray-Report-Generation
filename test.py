@@ -27,7 +27,8 @@ def find_k_largest(x, k, allow_end_seq=True, end_seq_token=0):
 
 
 def evaluate_beam_search(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predictions, visual_features, k):
-    hidden = decoder.reset_state(batch_size=1)
+    hidden = decoder.get_zero_state(batch_size=1)
+    decoder.reset_hidden_state(1)
     features = encoder(visual_features, tag_predictions)
     dec_input = tf.expand_dims([tokenizer_wrapper.get_token_of_word("startseq")], 0)
     predictions, hidden, _ = decoder(dec_input, features, hidden)
@@ -40,13 +41,13 @@ def evaluate_beam_search(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predict
     while not beam_paths.should_stop():
         t = time.time()
 
-        beam_paths.sort()
+        # beam_paths.sort()
         # print("time taken to sort: {}".format(time.time()-t))
 
         hidden = beam_paths.get_best_paths_hidden()
         dec_input = beam_paths.get_best_paths_input()
         best_paths = beam_paths.get_best_k()
-
+        decoder.set_hidden_state(hidden)
         beam_paths.pop_best_k()
 
         # print("________________________")
@@ -84,7 +85,8 @@ def evaluate_beam_search(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predict
 def evaluate(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predictions, visual_features):
     attention_plot = np.zeros((FLAGS.max_sequence_length, 512))
 
-    hidden = decoder.reset_state(batch_size=1)
+    hidden = decoder.get_zero_state(batch_size=1)
+    decoder.reset_hidden_state(1)
 
     features = encoder(visual_features, tag_predictions)
     dec_input = tf.expand_dims([tokenizer_wrapper.get_token_of_word("startseq")], 0)
@@ -107,7 +109,6 @@ def evaluate(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predictions, visual
             return result, attention_plot
 
         result.append(tokenizer_wrapper.get_word_from_token(predicted_id))
-
         dec_input = tf.expand_dims([predicted_id], 0)
 
     attention_plot = attention_plot[:len(result), :]
@@ -234,7 +235,7 @@ if __name__ == "__main__":
         ckpt.restore(ckpt_manager.latest_checkpoint)
         print("Restored from checkpoint: {}".format(ckpt_manager.latest_checkpoint))
     evaluate_enqueuer(test_enqueuer, test_steps, FLAGS, encoder, decoder, tokenizer_wrapper, chexnet,
-                      write_images=True, test_mode=True, beam_search_k=3)
+                      write_images=True, test_mode=True, beam_search_k=1)
 
 # # captions on the validation set
 # rid = np.random.randint(0, len(img_name_val))
