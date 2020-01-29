@@ -18,7 +18,7 @@ class RNN_Decoder(tf.keras.Model):
         self.gru = tf.keras.layers.GRU(self.units,
                                        return_sequences=True,
                                        return_state=True,
-                                       stateful=True,
+                                       # stateful=True,
                                        recurrent_initializer='glorot_uniform')
 
         # self.gru2 = tf.keras.layers.GRU(self.units,
@@ -33,6 +33,12 @@ class RNN_Decoder(tf.keras.Model):
         self.attention = BahdanauAttention(self.units)
 
     def call(self, x, features, hidden):
+
+
+        self.initial_state = [hidden]
+
+        self.gru.get_initial_state = self.get_initial_state
+
         # defining attention as a separate model
         context_vector, attention_weights = self.attention(features, hidden)
         # x shape after passing through embedding == (batch_size, 1, embedding_dim)
@@ -59,16 +65,19 @@ class RNN_Decoder(tf.keras.Model):
 
         return x, state, attention_weights
 
+    def get_initial_state(self, inputs):
+        return self.initial_state
+
     def get_zero_state(self, batch_size):
         return tf.zeros((batch_size, self.units))
 
-    def get_hidden_state(self):
-        return self.gru.states
-
-    def set_hidden_state(self,states):
-        self.gru.reset_states(states=states)
-
-    def reset_hidden_state(self,batch_size):
-        self.gru.reset_states(states=[self.get_zero_state(batch_size)])
+    # def get_hidden_state(self):
+    #     return self.gru.states
+    #
+    # def set_hidden_state(self,states):
+    #     self.gru.reset_states(states=states)
+    #
+    # def reset_hidden_state(self,batch_size):
+    #     self.gru.reset_states(states=[self.get_zero_state(batch_size)])
 
 

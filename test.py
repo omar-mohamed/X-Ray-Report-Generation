@@ -86,7 +86,7 @@ def evaluate(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predictions, visual
     attention_plot = np.zeros((FLAGS.max_sequence_length, 512))
 
     hidden = decoder.get_zero_state(batch_size=1)
-    decoder.reset_hidden_state(1)
+    # decoder.reset_hidden_state(1)
 
     features = encoder(visual_features, tag_predictions)
     dec_input = tf.expand_dims([tokenizer_wrapper.get_token_of_word("startseq")], 0)

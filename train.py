@@ -62,7 +62,7 @@ def train_step(tag_predictions, visual_features, target):
     # initializing the hidden state for each batch
     # because the captions are not related from image to image
     hidden = decoder.get_zero_state(batch_size=target.shape[0])
-    decoder.reset_hidden_state(target.shape[0])
+    # decoder.reset_hidden_state(target.shape[0])
 
     dec_input = tf.expand_dims([tokenizer_wrapper.get_token_of_word("startseq")] * FLAGS.batch_size, 1)
 
