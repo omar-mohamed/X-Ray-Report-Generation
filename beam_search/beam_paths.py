@@ -64,8 +64,8 @@ class BeamPaths():
     def get_best_paths_hidden(self):
         hidden_size=self.paths[0].get_hidden_size()
         size=min(len(self.paths),self.k)
-        hidden = np.zeros(shape=(size, hidden_size[1]))
+        hidden = np.zeros(shape=(size, hidden_size[1]),dtype=np.float32)
         for i in range(size):
             hidden[i]=self.paths[i].get_hidden_layer()[0]
 
-        return hidden
+        return tf.convert_to_tensor(hidden)

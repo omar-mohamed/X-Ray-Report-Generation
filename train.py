@@ -132,7 +132,7 @@ for epoch in range(start_epoch, FLAGS.num_epochs):
         total_loss += t_loss
         # print("Time to train step: {} s ".format(time.time() - t))
 
-        if batch % 20 == 0 and batch > 0:
+        if batch % 1 == 0 and batch > 0:
             print('Epoch {} Batch {} Loss {:.4f}'.format(
                 epoch + 1, batch, batch_loss.numpy() / int(target.shape[1])))
     # storing the epoch end loss value to plot later
