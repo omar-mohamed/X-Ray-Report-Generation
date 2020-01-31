@@ -50,34 +50,47 @@ def evaluate_beam_search(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predict
         # decoder.set_hidden_state(hidden)
         beam_paths.pop_best_k()
 
-        print("________________________")
-        for path in best_paths:
-            print("Path: {}".format(path.get_sentence_words()))
+        # print("________________________")
+        # for path in best_paths:
+        #     print("Path: {}".format(path.get_sentence_words()))
+
         # new_paths = []
         t = time.time()
         predictions, hidden, _ = decoder(dec_input, features, hidden)
         # print("time taken to predict: {}".format(time.time()-t))
         t = time.time()
-
+        # time_deepcopy = 0
+        # time_adding_records = 0
+        # time_adding_paths = 0
         for i in range(predictions.shape[0]):
-            preds = tf.nn.softmax(tf.cast(predictions[i], dtype=tf.float32))
+            preds = tf.nn.softmax(tf.cast(predictions[i], dtype=tf.float32)).numpy()
+            hid = tf.expand_dims(hidden[i], 0).numpy()
+
             # k_largest_ind = find_k_largest(preds, k)
             for index in range(preds.shape[0]):
-
+                # t1 = time.time()
                 new_path = deepcopy(best_paths[i])
-                new_path.add_record(index, preds[index], tf.expand_dims(hidden[i], 0))
+                # time_deepcopy += time.time() - t1
+                # t1 = time.time()
+                new_path.add_record(index, preds[index], hid)
+                # time_adding_records += time.time() - t1
+                # t1 = time.time()
                 beam_paths.add_path(new_path)
+                # time_adding_paths +=time.time()-t1
                 # new_paths.append(new_path)
         # beam_paths.add_top_k_paths(new_paths)
         # print("time taken to add paths: {}".format(time.time()-t))
+        # print("time taken to deepcopy: {}".format(time_deepcopy))
+        # print("time taken to add records: {}".format(time_adding_records))
+        # print("time taken to add paths: {}".format(time_adding_paths))
 
     best_paths = beam_paths.get_ended_paths()
-    # for path in best_paths:
-    #     print(path.get_sentence_words())
-    #     print(path.get_prob_list())
-    #     print(path.get_total_probability())
-    #     print("--------")
-    # print("____________________________________")
+    for path in best_paths:
+        print(path.get_sentence_words())
+        print(path.get_prob_list())
+        print(path.get_total_probability())
+        print("--------")
+    print("____________________________________")
 
     return best_paths[0].get_sentence_words()
 
