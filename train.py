@@ -15,6 +15,7 @@ from test import evaluate_enqueuer
 
 FLAGS = argHandler()
 FLAGS.setDefaults()
+tf.keras.backend.set_learning_phase(1)
 
 tokenizer_wrapper = TokenizerWrapper(FLAGS.all_data_csv, FLAGS.csv_label_columns[0],
                                      FLAGS.max_sequence_length, FLAGS.tokenizer_vocab_size)
@@ -34,7 +35,7 @@ print(f"Tags Embeddings shape: {tags_embeddings.shape}")
 
 del medical_w2v
 
-encoder = CNN_Encoder(FLAGS.embedding_dim, FLAGS.tags_reducer_units, FLAGS.encoder_layers, tags_embeddings)
+encoder = CNN_Encoder(FLAGS.embedding_dim, FLAGS.encoder_layers, tags_embeddings)
 decoder = RNN_Decoder(FLAGS.embedding_dim, FLAGS.units, FLAGS.tokenizer_vocab_size, FLAGS.classifier_layers, embeddings)
 
 optimizer = get_optimizer(FLAGS.optimizer_type, FLAGS.learning_rate)
@@ -123,6 +124,7 @@ for epoch in range(start_epoch, FLAGS.num_epochs):
         # print( target.max())
         # t = time.time()
         tag_predictions, visual_feaures = chexnet.get_visual_features(img, FLAGS.tags_threshold)
+
         if not FLAGS.tags_attention:
             tag_predictions = None
         # print("Time to get visual features: {} s ".format(time.time() - t))

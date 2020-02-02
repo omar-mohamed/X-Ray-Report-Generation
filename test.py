@@ -17,7 +17,6 @@ from beam_search.beam_path import BeamPath
 from beam_search.beam_paths import BeamPaths
 from copy import deepcopy
 
-
 def find_k_largest(x, k, allow_end_seq=True, end_seq_token=0):
     x = np.array(x)
     if not allow_end_seq:
@@ -168,6 +167,7 @@ def save_output_prediction(FLAGS, img_name, target_sentence, predicted_sentence)
 
 def evaluate_enqueuer(enqueuer, steps, FLAGS, encoder, decoder, tokenizer_wrapper, chexnet, name='Test set',
                       verbose=True, write_json=True, write_images=False, test_mode=False, beam_search_k=1):
+    tf.keras.backend.set_learning_phase(0)
     hypothesis = []
     references = []
     if not enqueuer.is_running():
@@ -207,6 +207,7 @@ def evaluate_enqueuer(enqueuer, steps, FLAGS, encoder, decoder, tokenizer_wrappe
             save_output_prediction(FLAGS, img_path[0], target_sentence, predicted_sentence)
         # print('Time taken for saving image {} sec\n'.format(time.time() - t))
 
+
     enqueuer.stop()
     scores = get_evalutation_scores(hypothesis, references, test_mode)
     print("{} scores: {}".format(name, scores))
@@ -214,7 +215,7 @@ def evaluate_enqueuer(enqueuer, steps, FLAGS, encoder, decoder, tokenizer_wrappe
         with open(os.path.join(FLAGS.ckpt_path, 'scores.json'), 'w') as fp:
             json.dump(str(scores), fp, indent=4)
     print('Time taken for evaluation {} sec\n'.format(time.time() - start))
-
+    tf.keras.backend.set_learning_phase(1)
     return scores
 
 
@@ -227,10 +228,10 @@ if __name__ == "__main__":
 
     print("** load test generator **")
 
-    test_enqueuer, test_steps = get_enqueuer(FLAGS.test_csv, 1, FLAGS, tokenizer_wrapper)
+    test_enqueuer, test_steps = get_enqueuer(FLAGS.test_csv, 4, FLAGS, tokenizer_wrapper)
     test_enqueuer.start(workers=FLAGS.generator_workers, max_queue_size=FLAGS.generator_queue_length)
 
-    encoder = CNN_Encoder(FLAGS.embedding_dim, FLAGS.tags_reducer_units, FLAGS.encoder_layers)
+    encoder = CNN_Encoder(FLAGS.embedding_dim, FLAGS.encoder_layers)
     decoder = RNN_Decoder(FLAGS.embedding_dim, FLAGS.units, FLAGS.tokenizer_vocab_size, FLAGS.classifier_layers)
 
     optimizer = tf.keras.optimizers.Adam()

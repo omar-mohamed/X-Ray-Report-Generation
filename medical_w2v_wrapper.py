@@ -3,6 +3,7 @@ import numpy as np
 import pickle
 import os
 
+
 class Medical_W2V_Wrapper:
     def __init__(self):
         if os.path.isfile("medical_word_embeddings/saved_embeddings.pickle"):
@@ -14,7 +15,7 @@ class Medical_W2V_Wrapper:
                 binary=True)
 
     def get_embeddings_matrix_for_words(self, word_tokens, vocab_size):
-        embeddings = np.zeros(shape=(vocab_size+1, self.word_embeddings['the'].shape[0]))
+        embeddings = np.zeros(shape=(vocab_size + 1, self.word_embeddings['the'].shape[0]))
         word_counter = 0
         for word, token in word_tokens.items():
             if word in self.word_embeddings:
@@ -31,13 +32,14 @@ class Medical_W2V_Wrapper:
         token = 0
         for _class in tag_classes:
             if _class in self.word_embeddings:
-                embeddings[token, :] = self.word_embeddings[_class]
+                sentence = _class.split()
+                embeddings[token, :] = self.word_embeddings[_class] / len(sentence)
             else:
                 sentence = _class.split()
                 sentence_vec = np.zeros(self.word_embeddings['the'].shape[0])
                 for word in sentence:
                     sentence_vec += self.word_embeddings[word]
-
+                sentence_vec = sentence_vec / len(sentence_vec)
                 embeddings[token, :] = sentence_vec
 
             token += 1
@@ -45,12 +47,12 @@ class Medical_W2V_Wrapper:
 
     def save_embeddings(self, word_tokens, tags):
         word_counter = 0
-        dictionary={}
+        dictionary = {}
         for word, token in word_tokens.items():
             if word in self.word_embeddings:
                 dictionary[word] = self.word_embeddings[word]
             else:
-                dictionary[word] = np.zeros(shape= self.word_embeddings['the'].shape[0])
+                dictionary[word] = np.zeros(shape=self.word_embeddings['the'].shape[0])
 
             word_counter += 1
         for word in tags:
@@ -61,7 +63,7 @@ class Medical_W2V_Wrapper:
                 sentence_vec = np.zeros(self.word_embeddings['the'].shape[0])
                 for sub_word in sentence:
                     sentence_vec += self.word_embeddings[sub_word]
-                dictionary[word]=sentence_vec
+                dictionary[word] = sentence_vec
             word_counter += 1
         print("saved {} words".format(word_counter))
         with open('medical_word_embeddings/saved_embeddings.pickle', 'wb') as handle:
