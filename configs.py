@@ -25,7 +25,7 @@ class argHandler(dict):
                     'number of conv layers to pop to get visual features')
         self.define('embedding_dim', 400,
                     'size of embedding vector')
-        self.define('csv_label_columns', ['Impression'], 'the name of the label columns in the csv')
+        self.define('csv_label_columns', ['Caption'], 'the name of the label columns in the csv')
         self.define('image_target_size', (224, 224, 3), 'the target size to resize the image')
 
         self.define('max_sequence_length', 170,
@@ -33,22 +33,22 @@ class argHandler(dict):
         self.define('num_epochs', 100, 'maximum number of epochs')
         self.define('units', 1024, 'number of units in the decoder')
         self.define('tags_reducer_units', 1024, 'number of units to reduce the embeddings. choose 0 if you want to keep it as is')
-        self.define('encoder_layers', [], 'a list describing the hidden layers of the encoder. Example [10,0.4,5] will create a hidden layer with size 10 then dropout wth drop prob 0.4, then hidden layer with size 5. If empty it will connect to output nodes directly.')
-        self.define('classifier_layers', [], 'a list describing the hidden layers of the encoder. Example [10,0.4,5] will create a hidden layer with size 10 then dropout wth drop prob 0.4, then hidden layer with size 5. If empty it will connect to output nodes directly.')
+        self.define('encoder_layers', [0.4], 'a list describing the hidden layers of the encoder. Example [10,0.4,5] will create a hidden layer with size 10 then dropout wth drop prob 0.4, then hidden layer with size 5. If empty it will connect to output nodes directly.')
+        self.define('classifier_layers', [0.4], 'a list describing the hidden layers of the encoder. Example [10,0.4,5] will create a hidden layer with size 10 then dropout wth drop prob 0.4, then hidden layer with size 5. If empty it will connect to output nodes directly.')
         self.define('tags_attention', True, 'if use attention on tags embeddings with visual features')
 
-        self.define('tokenizer_vocab_size', 1001,
+        self.define('tokenizer_vocab_size', 1501,
                     'The number of words to tokinze, the rest will be set as <unk>')
-        self.define('batch_size', 90, 'batch size for training and testing')
+        self.define('batch_size', 16, 'batch size for training and testing')
         self.define('generator_workers', 4, 'The number of cpu workers generating batches.')
         self.define('generator_queue_length', 16, 'The maximum number of batches in the queue to be trained on.')
-        self.define('tags_threshold', 0.2,
+        self.define('tags_threshold', 0.1,
                     'The threshold from which to detect a tag.')
         self.define('ckpt_path', './checkpoints/',
                     'where to save the checkpoints. The path will be created if it does not exist. The system saves every epoch by default')
         self.define('continue_from_last_ckpt', True,
                     'continue training from last ckpt or not')
-        self.define('learning_rate', 1e-4, 'The optimizer learning rate')
+        self.define('learning_rate', 1e-3, 'The optimizer learning rate')
         self.define('optimizer_type', 'Adam', 'Choose from (Adam, SGD, RMSprop, Adagrad, Adadelta, Adamax, Nadam)')
         self.define('tags', tags,
                     'the names of the tags')
