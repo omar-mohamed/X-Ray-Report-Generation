@@ -1,7 +1,7 @@
 import numpy as np
 import os
 import pandas as pd
-from tensorflow.python.keras.utils import Sequence
+from tensorflow.keras.utils import Sequence
 from PIL import Image
 from skimage.transform import resize
 
