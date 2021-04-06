@@ -62,3 +62,4 @@ urllib3==1.25.3
 Werkzeug==0.15.5
 wrapt==1.11.2
 xdg==4.0.1
+git+https://github.com/Maluuba/nlg-eval.git@master

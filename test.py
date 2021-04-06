@@ -17,6 +17,7 @@ from beam_search.beam_path import BeamPath
 from beam_search.beam_paths import BeamPaths
 from copy import deepcopy
 
+
 def find_k_largest(x, k, allow_end_seq=True, end_seq_token=0):
     x = np.array(x)
     if not allow_end_seq:
@@ -27,7 +28,6 @@ def find_k_largest(x, k, allow_end_seq=True, end_seq_token=0):
 
 def evaluate_beam_search(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predictions, visual_features, k):
     hidden = decoder.get_zero_state(batch_size=1)
-    # decoder.reset_hidden_state(1)
     features = encoder(visual_features, tag_predictions)
     dec_input = tf.expand_dims([tokenizer_wrapper.get_token_of_word("startseq")], 0)
     predictions, hidden, _ = decoder(dec_input, features, hidden)
@@ -38,50 +38,23 @@ def evaluate_beam_search(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predict
         beam_paths.add_path(BeamPath(tokenizer_wrapper, FLAGS.max_sequence_length, [k_largest_ind[i]], hidden,
                                      [predictions[k_largest_ind[i]]]))
     while not beam_paths.should_stop():
-        t = time.time()
-
-        # beam_paths.sort()
-        # print("time taken to sort: {}".format(time.time()-t))
 
         hidden = beam_paths.get_best_paths_hidden()
         dec_input = beam_paths.get_best_paths_input()
         best_paths = beam_paths.get_best_k()
-        # decoder.set_hidden_state(hidden)
         beam_paths.pop_best_k()
 
-        # print("________________________")
-        # for path in best_paths:
-        #     print("Path: {}".format(path.get_sentence_words()))
-
-        # new_paths = []
-        t = time.time()
         predictions, hidden, _ = decoder(dec_input, features, hidden)
-        # print("time taken to predict: {}".format(time.time()-t))
-        t = time.time()
-        # time_deepcopy = 0
-        # time_adding_records = 0
-        # time_adding_paths = 0
         for i in range(predictions.shape[0]):
             preds = tf.nn.softmax(tf.cast(predictions[i], dtype=tf.float32)).numpy()
             hid = tf.expand_dims(hidden[i], 0).numpy()
 
-            # k_largest_ind = find_k_largest(preds, k)
             for index in range(preds.shape[0]):
-                # t1 = time.time()
                 new_path = deepcopy(best_paths[i])
-                # time_deepcopy += time.time() - t1
-                # t1 = time.time()
+
                 new_path.add_record(index, preds[index], hid)
-                # time_adding_records += time.time() - t1
-                # t1 = time.time()
+
                 beam_paths.add_path(new_path)
-                # time_adding_paths +=time.time()-t1
-                # new_paths.append(new_path)
-        # beam_paths.add_top_k_paths(new_paths)
-        # print("time taken to add paths: {}".format(time.time()-t))
-        # print("time taken to deepcopy: {}".format(time_deepcopy))
-        # print("time taken to add records: {}".format(time_adding_records))
-        # print("time taken to add paths: {}".format(time_adding_paths))
 
     best_paths = beam_paths.get_ended_paths()
     for path in best_paths:
@@ -207,7 +180,6 @@ def evaluate_enqueuer(enqueuer, steps, FLAGS, encoder, decoder, tokenizer_wrappe
             save_output_prediction(FLAGS, img_path[0], target_sentence, predicted_sentence)
         # print('Time taken for saving image {} sec\n'.format(time.time() - t))
 
-
     enqueuer.stop()
     scores = get_evalutation_scores(hypothesis, references, test_mode)
     print("{} scores: {}".format(name, scores))
@@ -236,7 +208,7 @@ if __name__ == "__main__":
 
     optimizer = tf.keras.optimizers.Adam()
 
-    chexnet = ChexnetWrapper('pretrained_models', FLAGS.visual_model_name, FLAGS.visual_model_pop_layers)
+    chexnet = ChexnetWrapper('pretrained_visual_model', FLAGS.visual_model_name, FLAGS.visual_model_pop_layers)
 
     ckpt = tf.train.Checkpoint(encoder=encoder,
                                decoder=decoder,
@@ -250,15 +222,3 @@ if __name__ == "__main__":
         print("Restored from checkpoint: {}".format(ckpt_manager.latest_checkpoint))
     evaluate_enqueuer(test_enqueuer, test_steps, FLAGS, encoder, decoder, tokenizer_wrapper, chexnet,
                       write_images=True, test_mode=True, beam_search_k=3)
-
-# # captions on the validation set
-# rid = np.random.randint(0, len(img_name_val))
-# image = img_name_val[rid]
-# real_caption = ' '.join([tokenizer.index_word[i] for i in cap_val[rid] if i not in [0]])
-# result, attention_plot = evaluate(image)
-#
-# print ('Real Caption:', real_caption)
-# print ('Prediction Caption:', ' '.join(result))
-# plot_attention(image, result, attention_plot)
-# # opening the image
-# Image.open(img_name_val[rid])
