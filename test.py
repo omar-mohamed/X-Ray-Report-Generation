@@ -55,11 +55,11 @@ def evaluate_beam_search(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predict
                 beam_paths.add_path(new_path)
 
     best_paths = beam_paths.get_ended_paths()
-    for path in best_paths:
-        print(path.get_sentence_words())
-        print(path.get_prob_list())
-        print(path.get_total_probability())
-        print("--------")
+    # for path in best_paths:
+    #     print(path.get_sentence_words())
+    #     print(path.get_prob_list())
+    #     print(path.get_total_probability())
+    #     print("--------")
     print("____________________________________")
 
     return best_paths[0].get_sentence_words()
