@@ -51,9 +51,7 @@ def evaluate_beam_search(FLAGS, encoder, decoder, tokenizer_wrapper, tag_predict
 
             for index in range(preds.shape[0]):
                 new_path = deepcopy(best_paths[i])
-
                 new_path.add_record(index, preds[index], hid)
-
                 beam_paths.add_path(new_path)
 
     best_paths = beam_paths.get_ended_paths()
@@ -200,7 +198,7 @@ if __name__ == "__main__":
 
     print("** load test generator **")
 
-    test_enqueuer, test_steps = get_enqueuer(FLAGS.test_csv, 4, FLAGS, tokenizer_wrapper)
+    test_enqueuer, test_steps = get_enqueuer(FLAGS.test_csv, 1, FLAGS, tokenizer_wrapper)
     test_enqueuer.start(workers=FLAGS.generator_workers, max_queue_size=FLAGS.generator_queue_length)
 
     encoder = CNN_Encoder(FLAGS.embedding_dim, FLAGS.encoder_layers)
@@ -221,4 +219,4 @@ if __name__ == "__main__":
         ckpt.restore(ckpt_manager.latest_checkpoint)
         print("Restored from checkpoint: {}".format(ckpt_manager.latest_checkpoint))
     evaluate_enqueuer(test_enqueuer, test_steps, FLAGS, encoder, decoder, tokenizer_wrapper, chexnet,
-                      write_images=True, test_mode=True, beam_search_k=3)
+                      write_images=True, test_mode=True, beam_search_k=FLAGS.beam_width)

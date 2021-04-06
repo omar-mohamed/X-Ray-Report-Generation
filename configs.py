@@ -49,6 +49,7 @@ class argHandler(dict):
         self.define('continue_from_last_ckpt', True,
                     'continue training from last ckpt or not')
         self.define('epochs_to_evaluate', 3, 'The number of epochs to train before evaluating on the test set.')
+        self.define('beam_width', 7, 'The beam search width during evaluation')
         self.define('learning_rate', 1e-3, 'The optimizer learning rate')
         self.define('optimizer_type', 'Adam', 'Choose from (Adam, SGD, RMSprop, Adagrad, Adadelta, Adamax, Nadam)')
         self.define('tags', tags,

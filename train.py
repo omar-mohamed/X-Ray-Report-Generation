@@ -149,7 +149,7 @@ for epoch in range(start_epoch, FLAGS.num_epochs):
         print("Evaluating on test set..")
         train_enqueuer.stop()
         current_scores = evaluate_enqueuer(test_enqueuer, test_steps, FLAGS, encoder, decoder, tokenizer_wrapper,
-                                           chexnet, beam_search_k=3)
+                                           chexnet, beam_search_k=FLAGS.beam_width)
         train_enqueuer.start(workers=FLAGS.generator_workers, max_queue_size=FLAGS.generator_queue_length)
         time_csv['epoch'].append(epoch + 1)
         time_csv['time_taken'].append(pure_training_time)
