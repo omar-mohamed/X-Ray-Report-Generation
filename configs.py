@@ -39,7 +39,7 @@ class argHandler(dict):
 
         self.define('tokenizer_vocab_size', 1501,
                     'The number of words to tokinze, the rest will be set as <unk>')
-        self.define('batch_size', 16, 'batch size for training and testing')
+        self.define('batch_size', 15, 'batch size for training and testing')
         self.define('generator_workers', 4, 'The number of cpu workers generating batches.')
         self.define('generator_queue_length', 16, 'The maximum number of batches in the queue to be trained on.')
         self.define('tags_threshold', 0.1,
