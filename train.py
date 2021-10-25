@@ -145,7 +145,7 @@ for epoch in range(start_epoch, FLAGS.num_epochs):
     print('Batches that took long: {}'.format(times_to_get_batch))
 
     ckpt_manager.save()
-    if epoch % FLAGS.epochs_to_evaluate == 0:
+    if epoch % FLAGS.epochs_to_evaluate == 0 and epoch > 0:
         print("Evaluating on test set..")
         train_enqueuer.stop()
         current_scores = evaluate_enqueuer(test_enqueuer, test_steps, FLAGS, encoder, decoder, tokenizer_wrapper,

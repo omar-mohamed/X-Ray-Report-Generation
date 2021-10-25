@@ -51,6 +51,11 @@ class AugmentedImageSequence(Sequence):
         batch_x = np.asarray([self.load_image(x_path) for x_path in batch_x_path])
         batch_x = self.transform_batch_images(batch_x)
         batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
+        if batch_x.shape[0] < self.batch_size:
+            remaining = self.batch_size - batch_x.shape[0]
+            batch_x = np.concatenate((batch_x,batch_x[0:remaining]), axis = 0)
+            batch_x_path = np.concatenate((batch_x_path,batch_x_path[0:remaining]), axis = 0)
+            batch_y = np.concatenate((batch_y,batch_y[0:remaining]), axis = 0)
         return batch_x, batch_y, batch_x_path
 
     def load_image(self, image_file):
@@ -83,7 +88,7 @@ class AugmentedImageSequence(Sequence):
 
     def prepare_dataset(self):
         df = self.dataset_df.sample(frac=1., random_state=self.random_state)
-        self.x_path, self.y = df["Image Index"].as_matrix(), self.tokenizer_wrapper.tokenize_sentences(df[self.class_names].as_matrix())
+        self.x_path, self.y = df["Image Index"].values, self.tokenizer_wrapper.tokenize_sentences(df[self.class_names].values)
 
     def on_epoch_end(self):
         if self.shuffle:
