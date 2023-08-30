@@ -7,6 +7,13 @@ We automatically generate full radiology reports given chest X-ray images from t
 
 ![vsgru dpi](https://user-images.githubusercontent.com/6074821/113486170-a8614000-94b1-11eb-9050-4ebba0f94e07.png)
 
+## Installation & Usage
+*The project was tested on a virtual environment of python 3.7, pip 23.2.1, and MacOS*
+- pip install -r full_requirements.txt (or pip install -r requirements.txt if there are errors because of using a different operating system, as requirements.txt only contains the main dependencies and pip will fetch the compatible sub-dependencies, but it will be slower)
+- nlg-eval --setup
+- python get_iu_xray.py (to download the dataset)
+- python train.py
+
 ## Related Repositories
 - CDGPT2 repository (main paper repo) [here](https://github.com/omar-mohamed/GPT2-Chest-X-Ray-Report-Generation).
 - Finetuned Chexnet repository [here](https://github.com/omar-mohamed/Chest-X-Ray-Tags-Classification).
